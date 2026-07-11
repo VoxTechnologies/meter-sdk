@@ -267,9 +267,20 @@ export type MeterAuthorizeResponse = {
   authorized: true;
   service: MeterService;
   customer: { serviceId: string; localId: string; name: string };
-  quote: MeterToolCall & { serviceId?: string; provider: string; credits: number };
+  // Mirrors the server's rated quote (ratedToolCall): no customerLocalId is echoed
+  // back, and credits may be 0 (Math.max(0, ...)), so this must not intersect the
+  // request-shaped MeterToolCall (which requires customerLocalId and forbids 0).
+  quote: {
+    tool: string;
+    provider: string;
+    credits: number;
+    productId?: string;
+    requestId?: string;
+    aiUsage?: MeterAiUsageInput | MeterAiUsage;
+  };
   balanceCredits: number;
-  reservation?: MeterCreditReservation;
+  // The server returns reservation: null when no requestId was supplied.
+  reservation?: MeterCreditReservation | null;
 };
 
 export type MeterCommitResponse = {
@@ -278,14 +289,14 @@ export type MeterCommitResponse = {
   service: MeterService;
   event: MeterUsageEvent;
   balanceCredits: number;
-  reservation?: MeterCreditReservation;
+  reservation?: MeterCreditReservation | null;
 };
 
 export type MeterReleaseResponse = {
   released: boolean;
   service: MeterService;
   customer: { serviceId: string; localId: string; name: string };
-  reservation?: MeterCreditReservation;
+  reservation?: MeterCreditReservation | null;
   account: MeterCreditAccount;
   balanceCredits: number;
 };
@@ -355,7 +366,9 @@ export class MeterPublicApiError extends Error {
     public readonly status: number,
     public readonly path: string,
     public readonly body: unknown,
-    public readonly requestId?: string
+    public readonly requestId?: string,
+    /** Parsed `retry-after` (seconds) on a 429, so callers can back off correctly. */
+    public readonly retryAfterSeconds?: number
   ) {
     super(
       `Meter Public API request failed: ${status} ${path}` +
@@ -382,6 +395,31 @@ export class MeterTimeoutError extends MeterNetworkError {
     this.name = "MeterTimeoutError";
   }
 }
+
+/**
+ * Thrown by meterToolCall/withUsage when the protected work succeeded but the
+ * usage commit could not be recorded. Carries the tool result and the requestId
+ * so the caller can keep the (possibly expensive) result and re-commit later:
+ * commit is idempotent server-side, keyed on requestId.
+ */
+export class MeterCommitFailedError<T = unknown> extends Error {
+  constructor(
+    public readonly result: T,
+    public readonly requestId: string,
+    cause: unknown
+  ) {
+    super(
+      `Meter commit failed for request ${requestId}; the tool result is preserved on this error for a later re-commit`,
+      { cause }
+    );
+    this.name = "MeterCommitFailedError";
+  }
+}
+
+const COMMIT_MAX_ATTEMPTS = 3;
+const COMMIT_RETRY_BASE_DELAY_MS = 100;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 type RequestOptions = {
   method?: string;
@@ -556,7 +594,10 @@ export class MeterPublicApiClient {
     autoRechargeEnabled?: boolean;
     rechargeThresholdCredits?: number;
     rechargeAmountCredits?: number;
-  }): Promise<MeterCustomerAccountEnvelope & { apiKey: string }> {
+    // The buyer API key is returned ONLY when a customer is first created. On any
+    // subsequent (idempotent) upsert of an existing customer the server omits it,
+    // so callers must treat apiKey as possibly-absent and persist it on creation.
+  }): Promise<MeterCustomerAccountEnvelope & { apiKey?: string }> {
     return this.request(this.servicePath("/customers"), { method: "POST", body: input });
   }
 
@@ -733,8 +774,24 @@ export class MeterPublicApiClient {
       throw err;
     }
     const aiUsage = typeof options.aiUsage === "function" ? await options.aiUsage(result) : options.aiUsage;
-    await this.commit({ ...usage, aiUsage: aiUsage ?? usage.aiUsage });
-    return result;
+    // Commit is idempotent server-side (keyed on requestId, duplicate commits are
+    // flagged, not double-charged), so transient network/5xx failures are safe to
+    // retry. Without retries the caller would lose the successful result while the
+    // reservation stays held until TTL and the usage goes unrecorded.
+    const commitInput = { ...usage, aiUsage: aiUsage ?? usage.aiUsage };
+    let commitError: unknown;
+    for (let attempt = 1; attempt <= COMMIT_MAX_ATTEMPTS; attempt++) {
+      if (attempt > 1) await sleep(COMMIT_RETRY_BASE_DELAY_MS * 2 ** (attempt - 2));
+      try {
+        await this.commit(commitInput);
+        return result;
+      } catch (error) {
+        commitError = error;
+        // A 4xx means the commit itself is invalid; retrying cannot succeed.
+        if (error instanceof MeterPublicApiError && error.status < 500) break;
+      }
+    }
+    throw new MeterCommitFailedError(result, usage.requestId, commitError);
   }
 
   async withUsage<T>(
@@ -790,6 +847,7 @@ export class MeterPublicApiClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let res: Response;
+    let text: string;
     try {
       res = await this.fetchImpl(url.toString(), {
         method: options.method ?? "GET",
@@ -797,6 +855,9 @@ export class MeterPublicApiClient {
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         signal: controller.signal,
       });
+      // Keep the timeout armed through the body read: a server that returns headers
+      // promptly but streams the body slowly would otherwise hang indefinitely.
+      text = await res.text();
     } catch (error) {
       if (controller.signal.aborted) {
         throw new MeterTimeoutError(path, this.timeoutMs, error);
@@ -805,7 +866,6 @@ export class MeterPublicApiClient {
     } finally {
       clearTimeout(timeout);
     }
-    const text = await res.text();
     let body: unknown = null;
     if (text) {
       try {
@@ -815,11 +875,17 @@ export class MeterPublicApiClient {
       }
     }
     if (!res.ok) {
+      const retryAfterRaw = res.headers.get("retry-after");
+      const retryAfterSeconds =
+        retryAfterRaw && Number.isFinite(Number(retryAfterRaw))
+          ? Number(retryAfterRaw)
+          : undefined;
       throw new MeterPublicApiError(
         res.status,
         path,
         body,
-        res.headers.get("x-request-id") ?? undefined
+        res.headers.get("x-request-id") ?? undefined,
+        retryAfterSeconds
       );
     }
     return body as T;
@@ -866,6 +932,7 @@ export class MeterOnboardingClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
+    let text: string;
     try {
       response = await this.fetchImpl(`${this.baseUrl}${path}`, {
         method: "POST",
@@ -877,13 +944,14 @@ export class MeterOnboardingClient {
         body: JSON.stringify(input),
         signal: controller.signal,
       });
+      // Keep the timeout armed through the body read (see MeterPublicApiClient.request).
+      text = await response.text();
     } catch (error) {
       if (controller.signal.aborted) throw new MeterTimeoutError(path, this.timeoutMs, error);
       throw new MeterNetworkError(path, error);
     } finally {
       clearTimeout(timeout);
     }
-    const text = await response.text();
     let body: unknown = null;
     try {
       body = text ? JSON.parse(text) : null;
