@@ -1,12 +1,24 @@
 {
   "name": "@meter-mcp/adapters",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-neutral HTTP handlers for Meter buyer and operator sessions",
-  "keywords": ["mcp", "billing", "payments", "nextjs", "express", "hono"],
+  "keywords": [
+    "mcp",
+    "billing",
+    "payments",
+    "nextjs",
+    "express",
+    "hono"
+  ],
   "author": "Yoichiro Hara",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "CHANGELOG.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,15 +41,24 @@
     "test": "tsx --test test/*.test.ts",
     "prepack": "npm run build"
   },
-  "dependencies": { "@meter-mcp/sdk": "^0.1.0" },
-  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@meter-mcp/sdk": "^0.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/masterleopold/meter-sdk.git",
     "directory": "packages/adapters"
   },
   "homepage": "https://github.com/masterleopold/meter-sdk/tree/main/packages/adapters#readme",
-  "bugs": { "url": "https://github.com/masterleopold/meter-sdk/issues" },
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org" },
+  "bugs": {
+    "url": "https://github.com/masterleopold/meter-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "license": "MIT"
 }

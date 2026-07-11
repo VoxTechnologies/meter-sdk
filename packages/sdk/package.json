@@ -1,12 +1,24 @@
 {
   "name": "@meter-mcp/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Server-side SDK for Meter prepaid credits and MCP usage billing",
-  "keywords": ["mcp", "billing", "payments", "prepaid", "credits", "usage-based-billing"],
+  "keywords": [
+    "mcp",
+    "billing",
+    "payments",
+    "prepaid",
+    "credits",
+    "usage-based-billing"
+  ],
   "author": "Yoichiro Hara",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "CHANGELOG.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,14 +41,21 @@
     "test": "tsx --test test/*.test.ts",
     "prepack": "npm run build"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/masterleopold/meter-sdk.git",
     "directory": "packages/sdk"
   },
   "homepage": "https://github.com/masterleopold/meter-sdk/tree/main/packages/sdk#readme",
-  "bugs": { "url": "https://github.com/masterleopold/meter-sdk/issues" },
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org" },
+  "bugs": {
+    "url": "https://github.com/masterleopold/meter-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "license": "MIT"
 }
