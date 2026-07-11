@@ -51,34 +51,34 @@ try {
   run("npm", ["install", "--ignore-scripts", "--no-package-lock", ...tarballs], { cwd: consumer });
   writeFileSync(
     path.join(consumer, "consumer.mjs"),
-    `import { MeterPublicApiClient, verifyMeterWebhookSignature } from "@meter/sdk";\n` +
-      `import { paidTool } from "@meter/mcp";\n` +
-      `import { createBuyerPortalHandler } from "@meter/adapters";\n` +
+    `import { MeterPublicApiClient, verifyMeterWebhookSignature } from "@meter-mcp/sdk";\n` +
+      `import { paidTool } from "@meter-mcp/mcp";\n` +
+      `import { createBuyerPortalHandler } from "@meter-mcp/adapters";\n` +
       `if (![MeterPublicApiClient, verifyMeterWebhookSignature, paidTool, createBuyerPortalHandler].every(Boolean)) process.exit(1);\n`
   );
   run(process.execPath, ["consumer.mjs"], { cwd: consumer });
   writeFileSync(
     path.join(consumer, "consumer.cjs"),
-    `const sdk = require("@meter/sdk");\n` +
-      `const mcp = require("@meter/mcp");\n` +
-      `const adapters = require("@meter/adapters");\n` +
+    `const sdk = require("@meter-mcp/sdk");\n` +
+      `const mcp = require("@meter-mcp/mcp");\n` +
+      `const adapters = require("@meter-mcp/adapters");\n` +
       `if (![sdk.MeterPublicApiClient, sdk.verifyMeterWebhookSignature, mcp.paidTool, adapters.createBuyerPortalHandler].every(Boolean)) process.exit(1);\n`
   );
   run(process.execPath, ["consumer.cjs"], { cwd: consumer });
   writeFileSync(
     path.join(consumer, "consumer.ts"),
-    `import { MeterPublicApiClient, type MeterUsageReport } from "@meter/sdk";\n` +
-      `import { paidTool } from "@meter/mcp";\n` +
-      `import { createBuyerPortalHandler } from "@meter/adapters";\n` +
+    `import { MeterPublicApiClient, type MeterUsageReport } from "@meter-mcp/sdk";\n` +
+      `import { paidTool } from "@meter-mcp/mcp";\n` +
+      `import { createBuyerPortalHandler } from "@meter-mcp/adapters";\n` +
       `const meter = new MeterPublicApiClient({ baseUrl: "https://meter.example", serviceId: "service" });\n` +
       `const report: MeterUsageReport | undefined = undefined;\n` +
       `void [meter, report, paidTool, createBuyerPortalHandler];\n`
   );
   writeFileSync(
     path.join(consumer, "consumer.cts"),
-    `import sdk = require("@meter/sdk");\n` +
-      `import mcp = require("@meter/mcp");\n` +
-      `import adapters = require("@meter/adapters");\n` +
+    `import sdk = require("@meter-mcp/sdk");\n` +
+      `import mcp = require("@meter-mcp/mcp");\n` +
+      `import adapters = require("@meter-mcp/adapters");\n` +
       `const meter = new sdk.MeterPublicApiClient({ baseUrl: "https://meter.example", serviceId: "service" });\n` +
       `void [meter, mcp.paidTool, adapters.createBuyerPortalHandler];\n`
   );

@@ -13,12 +13,12 @@ part of this repository.
 
 | Package | Purpose |
 | --- | --- |
-| `@meter/sdk` | Typed server-side API client and webhook verification |
-| `@meter/mcp` | `paidTool` and `registerPaidTool` MCP billing wrappers |
-| `@meter/adapters` | Fetch, Next.js, Hono, and Express hosted-session adapters |
+| `@meter-mcp/sdk` | Typed server-side API client and webhook verification |
+| `@meter-mcp/mcp` | `paidTool` and `registerPaidTool` MCP billing wrappers |
+| `@meter-mcp/adapters` | Fetch, Next.js, Hono, and Express hosted-session adapters |
 
 ```bash
-npm install @meter/sdk
+npm install @meter-mcp/sdk
 ```
 
 All packages support ESM and CommonJS on Node.js 20, 22, and 24. Service API

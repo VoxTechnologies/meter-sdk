@@ -1,5 +1,5 @@
-import { createBuyerPortalRedirectHandler } from "@meter/adapters";
-import { MeterPublicApiClient } from "@meter/sdk";
+import { createBuyerPortalRedirectHandler } from "@meter-mcp/adapters";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
 
 const meter = new MeterPublicApiClient({
   baseUrl: process.env.METER_API_URL!,

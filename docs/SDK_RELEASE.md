@@ -1,6 +1,6 @@
 # SDK release runbook
 
-Meter publishes `@meter/sdk`, `@meter/mcp`, and `@meter/adapters` together from
+Meter publishes `@meter-mcp/sdk`, `@meter-mcp/mcp`, and `@meter-mcp/adapters` together from
 the public `masterleopold/meter-sdk` repository. Meter's service implementation
 remains in a separate private repository.
 
@@ -23,9 +23,9 @@ Bootstrap commands, after creating or joining the `@meter` npm organization:
 npm login
 npm whoami
 npm run verify
-npm publish --workspace @meter/sdk --access public
-npm publish --workspace @meter/mcp --access public
-npm publish --workspace @meter/adapters --access public
+npm publish --workspace @meter-mcp/sdk --access public
+npm publish --workspace @meter-mcp/mcp --access public
+npm publish --workspace @meter-mcp/adapters --access public
 ```
 
 Then install npm 11.5.1 or newer and register the workflow as the trusted
@@ -33,9 +33,9 @@ publisher for each package:
 
 ```bash
 npm install --global npm@latest
-npm trust github @meter/sdk --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
-npm trust github @meter/mcp --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
-npm trust github @meter/adapters --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
+npm trust github @meter-mcp/sdk --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
+npm trust github @meter-mcp/mcp --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
+npm trust github @meter-mcp/adapters --file sdk-publish.yml --repo masterleopold/meter-sdk --env npm --allow-publish --yes
 ```
 
 The bootstrap publish is the only step that needs interactive npm credentials.

@@ -1,18 +1,18 @@
-# @meter/mcp
+# @meter-mcp/mcp
 
 Drop-in prepaid billing wrappers for Model Context Protocol tools.
 
 ## Install
 
 ```bash
-npm install @meter/sdk @meter/mcp
+npm install @meter-mcp/sdk @meter-mcp/mcp
 ```
 
 ## Register a paid tool
 
 ```ts
-import { MeterPublicApiClient } from "@meter/sdk";
-import { registerPaidTool } from "@meter/mcp";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
+import { registerPaidTool } from "@meter-mcp/mcp";
 
 const meter = new MeterPublicApiClient({
   baseUrl: process.env.METER_API_URL!,

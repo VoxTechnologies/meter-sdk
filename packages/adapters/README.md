@@ -1,4 +1,4 @@
-# @meter/adapters
+# @meter-mcp/adapters
 
 Authenticated HTTP handlers for hosted Meter buyer portals and service
 consoles. The core handlers use the standard Fetch `Request` and `Response`
@@ -8,13 +8,13 @@ Express bridge is included.
 ## Install
 
 ```bash
-npm install @meter/sdk @meter/adapters
+npm install @meter-mcp/sdk @meter-mcp/adapters
 ```
 
 ## Next.js route
 
 ```ts
-import { createBuyerPortalRedirectHandler } from "@meter/adapters";
+import { createBuyerPortalRedirectHandler } from "@meter-mcp/adapters";
 import { meter } from "@/lib/meter";
 import { auth } from "@/lib/auth";
 
@@ -32,7 +32,7 @@ export const GET = createBuyerPortalRedirectHandler({
 ## Operator console
 
 ```ts
-import { createOperatorConsoleRedirectHandler } from "@meter/adapters";
+import { createOperatorConsoleRedirectHandler } from "@meter-mcp/adapters";
 
 export const GET = createOperatorConsoleRedirectHandler({
   meter,
@@ -45,7 +45,7 @@ export const GET = createOperatorConsoleRedirectHandler({
 ## Express
 
 ```ts
-import { createBuyerPortalRedirectHandler, toExpressHandler } from "@meter/adapters";
+import { createBuyerPortalRedirectHandler, toExpressHandler } from "@meter-mcp/adapters";
 
 app.get(
   "/billing",

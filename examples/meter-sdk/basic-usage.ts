@@ -1,4 +1,4 @@
-import { MeterPublicApiClient } from "@meter/sdk";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
 
 const meter = new MeterPublicApiClient({
   baseUrl: process.env.METER_API_URL!,

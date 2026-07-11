@@ -1,4 +1,4 @@
-# @meter/mcp
+# @meter-mcp/mcp
 
 ## 0.1.0
 

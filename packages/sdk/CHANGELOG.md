@@ -1,4 +1,4 @@
-# @meter/sdk
+# @meter-mcp/sdk
 
 ## 0.1.0
 

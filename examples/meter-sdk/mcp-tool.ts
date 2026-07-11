@@ -1,10 +1,10 @@
-import { registerPaidTool, type McpServerLike } from "@meter/mcp";
-import { MeterPublicApiClient } from "@meter/sdk";
+import { registerPaidTool, type McpServerLike } from "@meter-mcp/mcp";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
 
 type ToolInput = { query: string; creatorId: string };
 type ToolExtra = { auth: { subject: string } };
 type ToolResult = { content: Array<{ type: string; text: string }> };
-declare const server: McpServerLike<ToolInput, ToolExtra, ToolResult | import("@meter/mcp").McpPaymentRequiredResult>;
+declare const server: McpServerLike<ToolInput, ToolExtra, ToolResult | import("@meter-mcp/mcp").McpPaymentRequiredResult>;
 
 const meter = new MeterPublicApiClient({
   baseUrl: process.env.METER_API_URL!,

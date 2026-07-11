@@ -1,5 +1,5 @@
-import { MeterPublicApiClient } from "@meter/sdk";
-import { aiUsageFromOpenAI } from "@meter/adapters";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
+import { aiUsageFromOpenAI } from "@meter-mcp/adapters";
 
 declare const openai: { responses: { create(input: unknown): Promise<any> } };
 

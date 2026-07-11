@@ -1,5 +1,5 @@
 {
-  "name": "@meter/mcp",
+  "name": "@meter-mcp/mcp",
   "version": "0.1.0",
   "description": "Drop-in metered tool wrappers for Model Context Protocol servers",
   "keywords": ["mcp", "model-context-protocol", "billing", "payments", "credits"],
@@ -29,7 +29,7 @@
     "test": "tsx --test test/*.test.ts",
     "prepack": "npm run build"
   },
-  "dependencies": { "@meter/sdk": "^0.1.0" },
+  "dependencies": { "@meter-mcp/sdk": "^0.1.0" },
   "engines": { "node": ">=20" },
   "repository": {
     "type": "git",

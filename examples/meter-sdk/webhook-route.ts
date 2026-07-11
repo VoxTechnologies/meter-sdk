@@ -1,4 +1,4 @@
-import { verifyMeterWebhookSignature } from "@meter/sdk";
+import { verifyMeterWebhookSignature } from "@meter-mcp/sdk";
 
 export async function POST(request: Request): Promise<Response> {
   const payload = await request.text();

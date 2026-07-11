@@ -1,5 +1,5 @@
 {
-  "name": "@meter/adapters",
+  "name": "@meter-mcp/adapters",
   "version": "0.1.0",
   "description": "Framework-neutral HTTP handlers for Meter buyer and operator sessions",
   "keywords": ["mcp", "billing", "payments", "nextjs", "express", "hono"],
@@ -29,7 +29,7 @@
     "test": "tsx --test test/*.test.ts",
     "prepack": "npm run build"
   },
-  "dependencies": { "@meter/sdk": "^0.1.0" },
+  "dependencies": { "@meter-mcp/sdk": "^0.1.0" },
   "engines": { "node": ">=20" },
   "repository": {
     "type": "git",

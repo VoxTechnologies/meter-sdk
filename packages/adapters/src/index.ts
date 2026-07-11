@@ -3,7 +3,7 @@ import {
   calculateMeterAiUsage,
   type MeterAiTokenPricing,
   type MeterAiUsage,
-} from "@meter/sdk";
+} from "@meter-mcp/sdk";
 
 export type MeterAiAdapterOptions = {
   model?: string;

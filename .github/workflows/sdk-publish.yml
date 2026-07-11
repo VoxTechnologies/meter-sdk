@@ -45,8 +45,8 @@ jobs:
       - name: Verify source, tests, and packed consumers
         run: npm run verify
       - name: Publish SDK
-        run: npm publish --workspace @meter/sdk
+        run: npm publish --workspace @meter-mcp/sdk
       - name: Publish MCP wrapper
-        run: npm publish --workspace @meter/mcp
+        run: npm publish --workspace @meter-mcp/mcp
       - name: Publish framework adapters
-        run: npm publish --workspace @meter/adapters
+        run: npm publish --workspace @meter-mcp/adapters

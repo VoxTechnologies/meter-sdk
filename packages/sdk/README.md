@@ -1,4 +1,4 @@
-# @meter/sdk
+# @meter-mcp/sdk
 
 Server-side TypeScript SDK for Meter prepaid credits, usage billing, hosted
 buyer portals, service onboarding, and provider webhooks.
@@ -15,13 +15,13 @@ Both ESM `import` and CommonJS `require` are supported.
 ## Install
 
 ```bash
-npm install @meter/sdk
+npm install @meter-mcp/sdk
 ```
 
 ## Meter a unit of work
 
 ```ts
-import { MeterPublicApiClient } from "@meter/sdk";
+import { MeterPublicApiClient } from "@meter-mcp/sdk";
 
 const meter = new MeterPublicApiClient({
   baseUrl: process.env.METER_API_URL!,
@@ -52,7 +52,7 @@ AI usage is attached only when protected work succeeds and Meter commits the
 billing transaction. Resolve it from the provider response:
 
 ```ts
-import { aiUsageFromOpenAI } from "@meter/adapters";
+import { aiUsageFromOpenAI } from "@meter-mcp/adapters";
 
 await meter.withUsage(usage, callOpenAI, {
   aiUsage: (response) => aiUsageFromOpenAI(response, {
@@ -82,7 +82,7 @@ import {
   isMeterPaymentRequiredPayload,
   MeterPublicApiError,
   MeterTimeoutError,
-} from "@meter/sdk";
+} from "@meter-mcp/sdk";
 
 try {
   await meter.authorize({
@@ -117,7 +117,7 @@ const consoleSession = await meter.createOperatorSession({
 });
 ```
 
-Use [`@meter/adapters`](../adapters) to expose these as authenticated Fetch,
+Use [`@meter-mcp/adapters`](../adapters) to expose these as authenticated Fetch,
 Next.js, Hono, or Express handlers.
 
 ## Gateway integration
@@ -150,7 +150,7 @@ console.log(integration.gatewayUrl);
 Read the raw request body before JSON parsing.
 
 ```ts
-import { verifyMeterWebhookSignature } from "@meter/sdk";
+import { verifyMeterWebhookSignature } from "@meter-mcp/sdk";
 
 const payload = await request.text();
 await verifyMeterWebhookSignature({

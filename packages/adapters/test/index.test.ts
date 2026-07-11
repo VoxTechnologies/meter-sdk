@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { MeterPublicApiClient } from "@meter/sdk";
+import type { MeterPublicApiClient } from "@meter-mcp/sdk";
 import {
   aiUsageFromAnthropic,
   aiUsageFromOpenAI,

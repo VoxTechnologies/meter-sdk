@@ -5,7 +5,7 @@ import {
   MeterPublicApiError,
   type MeterToolCall,
   type MeterAiUsageInput,
-} from "@meter/sdk";
+} from "@meter-mcp/sdk";
 
 export type MeteredToolContext<TInput, TExtra> = {
   input: TInput;

@@ -2,7 +2,7 @@
 
 The public SDK is split into three dual ESM/CommonJS packages for Node.js 20 and newer.
 
-## `@meter/sdk`
+## `@meter-mcp/sdk`
 
 ### `MeterPublicApiClient`
 
@@ -71,7 +71,7 @@ output, reasoning tokens, request count, provider request ID, and either actual
 integer micro-USD calculation. `usage()` returns model/tool/customer cost
 rollups with gross revenue, gross profit, margin, and unpriced-call counts.
 
-## `@meter/mcp`
+## `@meter-mcp/mcp`
 
 - `paidTool`: wraps an arbitrary async tool handler.
 - `registerPaidTool`: registers a wrapped tool on an MCP-compatible server.
@@ -81,7 +81,7 @@ Billing values can be constants or async resolvers based on tool input and MCP
 extra context. Supported attribution fields are customer, credits, provider,
 product, request ID, and reservation TTL.
 
-## `@meter/adapters`
+## `@meter-mcp/adapters`
 
 - `createBuyerPortalHandler`
 - `createBuyerPortalRedirectHandler`

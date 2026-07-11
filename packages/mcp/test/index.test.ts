@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MeterPublicApiError, type MeterPublicApiClient } from "@meter/sdk";
+import { MeterPublicApiError, type MeterPublicApiClient } from "@meter-mcp/sdk";
 import {
   MeterMcpConfigurationError,
   meterErrorToMcpResult,
