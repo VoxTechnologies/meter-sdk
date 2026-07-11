@@ -1,0 +1,33 @@
+{
+  "name": "meter-sdk-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" },
+  "packageManager": "npm@11.3.0",
+  "scripts": {
+    "build": "npm run build -w @meter/sdk && npm run build -w @meter/mcp && npm run build -w @meter/adapters",
+    "typecheck": "npm run typecheck -w @meter/sdk && npm run typecheck -w @meter/mcp && npm run typecheck -w @meter/adapters && npm run typecheck:examples",
+    "test": "npm test -w @meter/sdk && npm test -w @meter/mcp && npm test -w @meter/adapters",
+    "lint:packages": "publint packages/sdk && publint packages/mcp && publint packages/adapters && attw --pack packages/sdk && attw --pack packages/mcp && attw --pack packages/adapters",
+    "typecheck:examples": "tsc -p examples/meter-sdk/tsconfig.json",
+    "verify:openapi": "node scripts/verify-openapi.mjs",
+    "audit:release": "npm audit --audit-level=low",
+    "verify": "npm run build && npm run test && npm run typecheck && npm run lint:packages && npm run verify:openapi && node scripts/verify-sdk-packages.mjs && npm run audit:release",
+    "changeset": "changeset",
+    "version:packages": "changeset version && npm install --package-lock-only"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@changesets/cli": "^2.29.7",
+    "@types/node": "^24.0.0",
+    "publint": "^0.3.21",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "tsup": { "esbuild": "^0.28.1" }
+  }
+}

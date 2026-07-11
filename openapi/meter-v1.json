@@ -1,0 +1,2638 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Meter Public API",
+    "version": "1.2.0",
+    "description": "Service-scoped prepaid credits, buyer accounts, usage reservations, and metered MCP usage for Meter integrations."
+  },
+  "servers": [
+    {
+      "url": "https://meter-mcp.vercel.app",
+      "description": "Meter hosted API"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Meter server"
+    }
+  ],
+  "security": [
+    {
+      "serviceBearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Services"
+    },
+    {
+      "name": "Service API Keys"
+    },
+    {
+      "name": "Customers"
+    },
+    {
+      "name": "Credits"
+    },
+    {
+      "name": "Reservations"
+    },
+    {
+      "name": "Metering"
+    },
+    {
+      "name": "Gateway"
+    },
+    {
+      "name": "Integrations"
+    },
+    {
+      "name": "Provider Webhooks"
+    },
+    {
+      "name": "Audit"
+    }
+  ],
+  "paths": {
+    "/api/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Read the Meter Public API v1 OpenAPI contract",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI document"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Read process, ledger, production readiness, reservation, and Stripe webhook health",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Service scope. Defaults to DEFAULT_SERVICE_ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Healthy Meter instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "tags": [
+          "Services"
+        ],
+        "summary": "List public service brand records",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Configured services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "services"
+                  ],
+                  "properties": {
+                    "services": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Service"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}": {
+      "put": {
+        "tags": [
+          "Services"
+        ],
+        "summary": "Create or update one service brand record",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ServiceResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/api-keys": {
+      "get": {
+        "tags": [
+          "Service API Keys"
+        ],
+        "summary": "List redacted service API keys",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ServiceApiKeysResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Service API Keys"
+        ],
+        "summary": "Create a service API key and return the secret once",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedServiceApiKeyResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/integration": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Read the service MCP gateway and customer authentication configuration",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service integration configuration"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Create or update an MCP gateway integration",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceIntegrationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated service integration"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/webhook-endpoints": {
+      "get": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "List provider webhook endpoints and recent deliveries",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider webhook endpoints and deliveries"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "Create a signed provider webhook endpoint",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookEndpointRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook endpoint and one-time signing secret"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/webhook-endpoints/{endpointId}": {
+      "delete": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "Disable a provider webhook endpoint",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/EndpointId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Webhook endpoint disabled"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/webhook-endpoints/test": {
+      "post": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "Queue and immediately attempt a test provider webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Test event queued"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/gateway/v1/services/{serviceId}/mcp": {
+      "post": {
+        "tags": [
+          "Gateway"
+        ],
+        "summary": "Invoke an upstream MCP server through Meter prepaid billing",
+        "security": [
+          {
+            "customerBearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upstream MCP JSON-RPC response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Insufficient prepaid credits"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/api-keys/{keyId}": {
+      "delete": {
+        "tags": [
+          "Service API Keys"
+        ],
+        "summary": "Revoke a service API key",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/KeyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ServiceApiKeysResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/audit-logs": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "List recent service API audit events",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "service",
+                    "auditLogs"
+                  ],
+                  "properties": {
+                    "service": {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    "auditLogs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceApiAuditLog"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/usage": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "List usage rollups, revenue-share preview, and recent usage events",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/reservations": {
+      "get": {
+        "tags": [
+          "Reservations"
+        ],
+        "summary": "List recent usage reservations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "held",
+                "committed",
+                "released"
+              ]
+            }
+          },
+          {
+            "name": "customerLocalId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent reservations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "service",
+                    "reservations",
+                    "expiredReservationsReleased"
+                  ],
+                  "properties": {
+                    "service": {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    "reservations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CreditReservation"
+                      }
+                    },
+                    "expiredReservationsReleased": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/reservations/release-expired": {
+      "post": {
+        "tags": [
+          "Reservations"
+        ],
+        "summary": "Release expired held reservations for one service",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseExpiredReservationsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expired reservations released",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "service",
+                    "releasedCount",
+                    "reservations"
+                  ],
+                  "properties": {
+                    "service": {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    "releasedCount": {
+                      "type": "integer"
+                    },
+                    "reservations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CreditReservation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers": {
+      "post": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "Register or update a service-scoped buyer customer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CustomerAccountResponseWithApiKey"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/credits": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read a buyer prepaid credit account",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CustomerAccountResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/ledger": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read recent buyer credit ledger entries",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer account and ledger",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CustomerAccountEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ledger"
+                      ],
+                      "properties": {
+                        "ledger": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CreditLedgerEntry"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/status": {
+      "patch": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "Suspend or resume a buyer account",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCustomerStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CustomerAccountResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/auto-recharge": {
+      "patch": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Configure buyer auto-recharge settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoRechargeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CustomerAccountResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/credit-adjustments": {
+      "post": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Apply an idempotent manual credit grant or refund",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditAdjustmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Adjustment applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CustomerAccountEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "adjustment"
+                      ],
+                      "properties": {
+                        "adjustment": {
+                          "$ref": "#/components/schemas/CreditAdjustment"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/top-up": {
+      "post": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Create a Stripe Checkout top-up or ledger-only top-up",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TopUpResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSuspended"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/customers/{customerLocalId}/portal-session": {
+      "post": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Create a short-lived signed buyer portal session URL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/CustomerLocalId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PortalSessionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/meter/authorize": {
+      "post": {
+        "tags": [
+          "Metering"
+        ],
+        "summary": "Quote and authorize a billable MCP operation, optionally holding credits by requestId",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterAuthorizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MeterAuthorizeResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSuspended"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/meter/commit": {
+      "post": {
+        "tags": [
+          "Metering"
+        ],
+        "summary": "Commit a previously authorized operation and debit credits",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterCommitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MeterCommitResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSuspended"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/meter/release": {
+      "post": {
+        "tags": [
+          "Metering"
+        ],
+        "summary": "Release a held reservation after protected work fails",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterReleaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MeterReleaseResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "serviceBearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Service API key sent as Authorization: Bearer <key>. x-meter-service-key is also accepted by Meter."
+      },
+      "customerBearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Buyer API key or service-configured OAuth access token. x-meter-customer-key is also accepted for API-key integrations."
+      }
+    },
+    "parameters": {
+      "ServiceId": {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CustomerLocalId": {
+        "name": "customerLocalId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "KeyId": {
+        "name": "keyId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EndpointId": {
+        "name": "endpointId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PaymentRequired": {
+        "description": "Insufficient prepaid credits; includes a signed buyer top-up URL",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PaymentRequired"
+            }
+          }
+        }
+      },
+      "AccountSuspended": {
+        "description": "The buyer credit account is suspended for this service",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSuspended"
+            }
+          }
+        }
+      },
+      "ServiceResponse": {
+        "description": "Service response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "service"
+              ],
+              "properties": {
+                "service": {
+                  "$ref": "#/components/schemas/Service"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServiceApiKeysResponse": {
+        "description": "Redacted service API keys",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "service",
+                "apiKeys"
+              ],
+              "properties": {
+                "service": {
+                  "$ref": "#/components/schemas/Service"
+                },
+                "apiKeys": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceApiKey"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreatedServiceApiKeyResponse": {
+        "description": "Created service API key; secret is returned once",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "service",
+                "apiKey"
+              ],
+              "properties": {
+                "service": {
+                  "$ref": "#/components/schemas/Service"
+                },
+                "apiKey": {
+                  "$ref": "#/components/schemas/CreatedServiceApiKey"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CustomerAccountResponse": {
+        "description": "Service customer and credit account",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CustomerAccountEnvelope"
+            }
+          }
+        }
+      },
+      "CustomerAccountResponseWithApiKey": {
+        "description": "Service customer, buyer API key, and credit account",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/CustomerAccountEnvelope"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "apiKey"
+                  ],
+                  "properties": {
+                    "apiKey": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "PortalSessionResponse": {
+        "description": "Signed buyer portal session",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "service",
+                "customer",
+                "session"
+              ],
+              "properties": {
+                "service": {
+                  "$ref": "#/components/schemas/Service"
+                },
+                "customer": {
+                  "$ref": "#/components/schemas/Customer"
+                },
+                "session": {
+                  "$ref": "#/components/schemas/PortalSession"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TopUpResponse": {
+        "description": "Stripe Checkout redirect URL or ledger-only account update",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "service",
+                "customer",
+                "mode"
+              ],
+              "properties": {
+                "service": {
+                  "$ref": "#/components/schemas/Service"
+                },
+                "customer": {
+                  "$ref": "#/components/schemas/Customer"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "ledger-only",
+                    "stripe-checkout"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "sessionId": {
+                  "type": "string"
+                },
+                "account": {
+                  "$ref": "#/components/schemas/CreditAccount"
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "mode",
+                    "account"
+                  ],
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "ledger-only"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "mode",
+                    "url",
+                    "sessionId"
+                  ],
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "stripe-checkout"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "MeterAuthorizeResponse": {
+        "description": "Authorization and optional held reservation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/MeterAuthorizeResponse"
+            }
+          }
+        }
+      },
+      "MeterCommitResponse": {
+        "description": "Committed usage and updated balance",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/MeterCommitResponse"
+            }
+          }
+        }
+      },
+      "MeterReleaseResponse": {
+        "description": "Released reservation and restored balance",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/MeterReleaseResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "schemaVersion",
+          "billingMode",
+          "stripeMode",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          },
+          "schemaVersion": {
+            "type": "string"
+          },
+          "billingMode": {
+            "type": "string"
+          },
+          "stripeMode": {
+            "type": "string"
+          },
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "productionReadiness": {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "reservations": {
+            "$ref": "#/components/schemas/ReservationSummary"
+          },
+          "autoRecharge": {
+            "type": "object",
+            "properties": {
+              "staleMs": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "open": {
+                "type": "integer"
+              },
+              "stale": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "succeeded": {
+                "type": "integer"
+              }
+            }
+          },
+          "stripeWebhook": {
+            "type": "object",
+            "properties": {
+              "configured": {
+                "type": "boolean"
+              },
+              "lastReceivedAt": {
+                "type": "integer"
+              },
+              "lastReceivedType": {
+                "type": "string"
+              },
+              "lastReceivedId": {
+                "type": "string"
+              },
+              "lastProcessed": {
+                "type": "boolean"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Service": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "creditName",
+          "brandColor"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "creditName": {
+            "type": "string"
+          },
+          "brandColor": {
+            "type": "string"
+          },
+          "supportEmail": {
+            "type": "string"
+          },
+          "termsUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "privacyUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "ServiceUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "creditName": {
+            "type": "string"
+          },
+          "brandColor": {
+            "type": "string"
+          },
+          "supportEmail": {
+            "type": "string"
+          },
+          "termsUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "privacyUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "CreateServiceApiKeyRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ServiceApiKey": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "last4",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "last4": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "revokedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "CreatedServiceApiKey": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServiceApiKey"
+          },
+          {
+            "type": "object",
+            "required": [
+              "secret"
+            ],
+            "properties": {
+              "secret": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Customer": {
+        "type": "object",
+        "required": [
+          "localId",
+          "name"
+        ],
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "localId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stripeCustomerId": {
+            "type": "string"
+          },
+          "initialCredits": {
+            "type": "integer"
+          },
+          "autoRechargeEnabled": {
+            "type": "boolean"
+          },
+          "rechargeThresholdCredits": {
+            "type": "integer"
+          },
+          "rechargeAmountCredits": {
+            "type": "integer"
+          }
+        }
+      },
+      "UpsertCustomerRequest": {
+        "type": "object",
+        "required": [
+          "customerLocalId"
+        ],
+        "properties": {
+          "customerLocalId": {
+            "type": "string"
+          },
+          "localId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "stripeCustomerId": {
+            "type": "string"
+          },
+          "initialCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "autoRechargeEnabled": {
+            "type": "boolean"
+          },
+          "rechargeThresholdCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rechargeAmountCredits": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CreditAccount": {
+        "type": "object",
+        "required": [
+          "serviceId",
+          "customerLocalId",
+          "customerName",
+          "balanceCredits",
+          "autoRechargeEnabled",
+          "rechargeThresholdCredits",
+          "rechargeAmountCredits",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "stripeCustomerId": {
+            "type": "string"
+          },
+          "balanceCredits": {
+            "type": "integer"
+          },
+          "autoRechargeEnabled": {
+            "type": "boolean"
+          },
+          "rechargeThresholdCredits": {
+            "type": "integer"
+          },
+          "rechargeAmountCredits": {
+            "type": "integer"
+          },
+          "defaultPaymentMethodId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "recharge_required"
+            ]
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "CustomerAccountEnvelope": {
+        "type": "object",
+        "required": [
+          "service",
+          "customer",
+          "account"
+        ],
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
+          },
+          "account": {
+            "$ref": "#/components/schemas/CreditAccount"
+          }
+        }
+      },
+      "SetCustomerStatusRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          }
+        }
+      },
+      "AutoRechargeRequest": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "thresholdCredits",
+          "amountCredits"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "thresholdCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amountCredits": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "CreditAdjustmentRequest": {
+        "type": "object",
+        "required": [
+          "creditsDelta",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "creditsDelta": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "adjustment",
+              "refund"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "CreditAdjustment": {
+        "type": "object",
+        "required": [
+          "creditsDelta",
+          "type",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "creditsDelta": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "adjustment",
+              "refund"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        }
+      },
+      "TopUpRequest": {
+        "type": "object",
+        "required": [
+          "credits"
+        ],
+        "properties": {
+          "credits": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTP(S) buyer origin for generated portal/checkout URLs. Must be same-origin with Meter or included in METER_ALLOWED_ORIGINS."
+          },
+          "returnUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional checkout return URL. Must be HTTP(S) and on the same origin as origin."
+          }
+        }
+      },
+      "PortalSessionRequest": {
+        "type": "object",
+        "properties": {
+          "ttlSeconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTP(S) buyer origin for the signed portal URL. Must be same-origin with Meter or included in METER_ALLOWED_ORIGINS."
+          }
+        }
+      },
+      "PortalSession": {
+        "type": "object",
+        "required": [
+          "token",
+          "url"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "CreditLedgerEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "serviceId",
+          "customerLocalId",
+          "type",
+          "creditsDelta",
+          "balanceAfter",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "integer"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "creditsDelta": {
+            "type": "integer"
+          },
+          "balanceAfter": {
+            "type": "integer"
+          },
+          "usageEventId": {
+            "type": "string"
+          },
+          "stripePaymentIntentId": {
+            "type": "string"
+          },
+          "checkoutSessionId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "CreditReservation": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "serviceId",
+          "customerLocalId",
+          "requestId",
+          "tool",
+          "credits",
+          "provider",
+          "status",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "integer"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "credits": {
+            "type": "integer"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "held",
+              "committed",
+              "released"
+            ]
+          },
+          "usageEventId": {
+            "type": "string"
+          },
+          "releasedReason": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReservationSummary": {
+        "type": "object",
+        "properties": {
+          "held": {
+            "type": "integer"
+          },
+          "committed": {
+            "type": "integer"
+          },
+          "released": {
+            "type": "integer"
+          },
+          "expiredHeld": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReleaseExpiredReservationsRequest": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000
+          }
+        }
+      },
+      "UsageRollup": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "calls": {
+            "type": "integer"
+          },
+          "credits": {
+            "type": "integer"
+          },
+          "usd": {
+            "type": "number"
+          },
+          "grossUsd": {
+            "type": "number"
+          },
+          "providerPayoutUsd": {
+            "type": "number"
+          }
+        }
+      },
+      "UsageEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "serviceId",
+          "customerLocalId",
+          "customerName",
+          "tool",
+          "credits",
+          "provider"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "integer"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "stripeCustomerId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "credits": {
+            "type": "integer"
+          },
+          "provider": {
+            "type": "string"
+          }
+        }
+      },
+      "UsageReport": {
+        "type": "object",
+        "required": [
+          "service",
+          "creditUsd",
+          "byCustomer",
+          "byTool",
+          "byProduct",
+          "revenueShare",
+          "recent"
+        ],
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "creditUsd": {
+            "type": "number"
+          },
+          "byCustomer": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRollup"
+            }
+          },
+          "byTool": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRollup"
+            }
+          },
+          "byProduct": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRollup"
+            }
+          },
+          "revenueShare": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRollup"
+            }
+          },
+          "recent": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageEvent"
+            }
+          }
+        }
+      },
+      "ServiceApiAuditLog": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "serviceId",
+          "method",
+          "path",
+          "statusCode",
+          "authResult"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "integer"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer"
+          },
+          "authResult": {
+            "type": "string"
+          },
+          "apiKeyLast4": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "userAgent": {
+            "type": "string"
+          }
+        }
+      },
+      "ServiceIntegrationUpdate": {
+        "type": "object",
+        "properties": {
+          "gatewayEnabled": {
+            "type": "boolean"
+          },
+          "upstreamUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "upstreamAuthMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bearer",
+              "header",
+              "oauth_client_credentials"
+            ]
+          },
+          "upstreamAuthHeader": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "upstreamAuthSecret": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "writeOnly": true
+          },
+          "oauthTokenUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "oauthClientId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oauthClientSecret": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "writeOnly": true
+          },
+          "oauthScopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customerAuthMode": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "jwt"
+            ]
+          },
+          "customerHeader": {
+            "type": "string"
+          },
+          "jwtIssuer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "jwtAudience": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "jwksUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "jwtSubjectClaim": {
+            "type": "string"
+          },
+          "jwtEmailClaim": {
+            "type": "string"
+          },
+          "autoProvisionCustomers": {
+            "type": "boolean"
+          },
+          "defaultCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "toolPrices": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "CreateWebhookEndpointRequest": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RatedToolCall": {
+        "type": "object",
+        "required": [
+          "customerLocalId",
+          "tool"
+        ],
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "credits": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "providerId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "MeterAuthorizeRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RatedToolCall"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "reservationTtlMs": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        ]
+      },
+      "MeterCommitRequest": {
+        "$ref": "#/components/schemas/RatedToolCall"
+      },
+      "MeterReleaseRequest": {
+        "type": "object",
+        "required": [
+          "serviceId",
+          "customerLocalId",
+          "requestId"
+        ],
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "customerLocalId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "MeterAuthorizeResponse": {
+        "type": "object",
+        "required": [
+          "authorized",
+          "service",
+          "customer",
+          "quote",
+          "balanceCredits"
+        ],
+        "properties": {
+          "authorized": {
+            "type": "boolean"
+          },
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/RatedToolCall"
+          },
+          "balanceCredits": {
+            "type": "integer"
+          },
+          "reservation": {
+            "$ref": "#/components/schemas/CreditReservation"
+          }
+        }
+      },
+      "MeterCommitResponse": {
+        "type": "object",
+        "required": [
+          "committed",
+          "duplicate",
+          "service",
+          "event",
+          "balanceCredits"
+        ],
+        "properties": {
+          "committed": {
+            "type": "boolean"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "event": {
+            "$ref": "#/components/schemas/UsageEvent"
+          },
+          "balanceCredits": {
+            "type": "integer"
+          },
+          "reservation": {
+            "$ref": "#/components/schemas/CreditReservation"
+          }
+        }
+      },
+      "MeterReleaseResponse": {
+        "type": "object",
+        "required": [
+          "released",
+          "service",
+          "customer",
+          "account",
+          "balanceCredits"
+        ],
+        "properties": {
+          "released": {
+            "type": "boolean"
+          },
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
+          },
+          "reservation": {
+            "$ref": "#/components/schemas/CreditReservation"
+          },
+          "account": {
+            "$ref": "#/components/schemas/CreditAccount"
+          },
+          "balanceCredits": {
+            "type": "integer"
+          }
+        }
+      },
+      "PaymentRequired": {
+        "type": "object",
+        "required": [
+          "error",
+          "message",
+          "serviceId",
+          "serviceName",
+          "creditName",
+          "customerId",
+          "requiredCredits",
+          "balanceCredits",
+          "topUpUrl"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "payment_required"
+          },
+          "message": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "creditName": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "requiredCredits": {
+            "type": "integer"
+          },
+          "balanceCredits": {
+            "type": "integer"
+          },
+          "topUpUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "AccountSuspended": {
+        "type": "object",
+        "required": [
+          "error",
+          "message",
+          "serviceId",
+          "serviceName",
+          "customerId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "account_suspended"
+          },
+          "message": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "allowed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

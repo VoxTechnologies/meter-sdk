@@ -1,0 +1,4 @@
+title = "Meter SDK secret scanning"
+
+[extend]
+useDefault = true

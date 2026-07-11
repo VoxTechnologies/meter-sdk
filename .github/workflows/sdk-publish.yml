@@ -1,0 +1,52 @@
+name: SDK publish
+
+on:
+  push:
+    tags:
+      - "sdk-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: meter-sdk-publish
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require public source for npm provenance
+        env:
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ "$REPOSITORY_PRIVATE" != "false" ]; then
+            echo "The Meter SDK source repository must be public before publishing with npm provenance." >&2
+            exit 1
+          fi
+
+  publish:
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@latest
+      - run: npm ci
+      - name: Verify tag and manifests
+        run: node scripts/verify-sdk-release.mjs
+      - name: Verify source, tests, and packed consumers
+        run: npm run verify
+      - name: Publish SDK
+        run: npm publish --workspace @meter/sdk
+      - name: Publish MCP wrapper
+        run: npm publish --workspace @meter/mcp
+      - name: Publish framework adapters
+        run: npm publish --workspace @meter/adapters

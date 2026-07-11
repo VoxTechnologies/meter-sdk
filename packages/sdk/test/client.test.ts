@@ -1,0 +1,157 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  MeterNetworkError,
+  MeterPublicApiClient,
+  MeterPublicApiError,
+  MeterTimeoutError,
+} from "../src/index.js";
+
+test("meterToolCall uses one generated request ID for authorize and commit", async () => {
+  const calls: Array<{ path: string; body: Record<string, unknown> }> = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (input, init) => {
+      const url = new URL(String(input));
+      calls.push({ path: url.pathname, body: JSON.parse(String(init?.body)) });
+      return Response.json({});
+    },
+  });
+
+  const result = await client.meterToolCall(
+    { customerLocalId: "customer_1", tool: "search", credits: 3 },
+    () => "result"
+  );
+
+  assert.equal(result, "result");
+  assert.deepEqual(calls.map((call) => call.path), [
+    "/api/v1/meter/authorize",
+    "/api/v1/meter/commit",
+  ]);
+  assert.equal(typeof calls[0]?.body.requestId, "string");
+  assert.equal(calls[0]?.body.requestId, calls[1]?.body.requestId);
+  assert.equal(calls[0]?.body.serviceId, "service_1");
+});
+
+test("meterToolCall releases the generated reservation when protected work fails", async () => {
+  const calls: Array<{ path: string; body: Record<string, unknown> }> = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (input, init) => {
+      const url = new URL(String(input));
+      calls.push({ path: url.pathname, body: JSON.parse(String(init?.body)) });
+      return Response.json({});
+    },
+  });
+
+  await assert.rejects(
+    client.withUsage(
+      { customerLocalId: "customer_1", tool: "search" },
+      () => {
+        throw new Error("upstream failed");
+      }
+    ),
+    /upstream failed/
+  );
+  assert.deepEqual(calls.map((call) => call.path), [
+    "/api/v1/meter/authorize",
+    "/api/v1/meter/release",
+  ]);
+  assert.equal(calls[0]?.body.requestId, calls[1]?.body.requestId);
+  assert.equal(calls[1]?.body.reason, "upstream failed");
+});
+
+test("HTTP errors expose status, response body, path, and request ID", async () => {
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async () =>
+      Response.json(
+        { error: "payment_required" },
+        { status: 402, headers: { "x-request-id": "req_123" } }
+      ),
+  });
+
+  await assert.rejects(client.getCustomerCredits("customer_1"), (error) => {
+    assert.ok(error instanceof MeterPublicApiError);
+    assert.equal(error.status, 402);
+    assert.equal(error.requestId, "req_123");
+    assert.equal(error.path, "/api/v1/services/service_1/customers/customer_1/credits");
+    assert.deepEqual(error.body, { error: "payment_required" });
+    return true;
+  });
+});
+
+test("network and timeout failures use stable SDK error classes", async () => {
+  const networkClient = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    fetchImpl: async () => {
+      throw new Error("offline");
+    },
+  });
+  await assert.rejects(networkClient.listServices(), MeterNetworkError);
+
+  const timeoutClient = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    timeoutMs: 5,
+    fetchImpl: async (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+  });
+  await assert.rejects(timeoutClient.listServices(), (error) => {
+    assert.ok(error instanceof MeterTimeoutError);
+    assert.equal(error.timeoutMs, 5);
+    return true;
+  });
+});
+
+test("base URL, path values, query, auth, and default origin are normalized", async () => {
+  let requestUrl = "";
+  let authorization = "";
+  let body: Record<string, unknown> = {};
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example/",
+    serviceId: "service/one",
+    serviceApiKey: "service-secret",
+    defaultOrigin: "https://provider.example",
+    fetchImpl: async (input, init) => {
+      requestUrl = String(input);
+      authorization = new Headers(init?.headers).get("authorization") ?? "";
+      body = JSON.parse(String(init?.body));
+      return Response.json({});
+    },
+  });
+  await client.createPortalSession("buyer/email@example.com");
+  assert.equal(
+    requestUrl,
+    "https://meter.example/api/v1/services/service%2Fone/customers/buyer%2Femail%40example.com/portal-session"
+  );
+  assert.equal(authorization, "Bearer service-secret");
+  assert.equal(body.origin, "https://provider.example");
+});
+
+test("configured tenant cannot be overridden by untyped runtime input", async () => {
+  let body: Record<string, unknown> = {};
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "trusted_service",
+    fetchImpl: async (_input, init) => {
+      body = JSON.parse(String(init?.body));
+      return Response.json({});
+    },
+  });
+  await client.authorize({
+    customerLocalId: "buyer",
+    tool: "search",
+    serviceId: "other_service",
+  } as never);
+  assert.equal(body.serviceId, "trusted_service");
+});
