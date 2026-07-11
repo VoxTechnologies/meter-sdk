@@ -36,6 +36,12 @@ export function aiUsageFromOpenAI(response: UnknownRecord, options: MeterAiAdapt
 
 export function aiUsageFromAnthropic(response: UnknownRecord, options: MeterAiAdapterOptions = {}): MeterAiUsage {
   const usage = response.usage ?? response.message?.usage ?? {};
+  // Anthropic's input_tokens EXCLUDES cache tokens (unlike OpenAI's inclusive
+  // prompt_tokens), so cache_read maps to the cheap cached bucket as-is.
+  // cache_creation is billed at a premium (~1.25x input), but MeterAiUsageInput
+  // has no cache-creation field; keeping it in the billable input count slightly
+  // undercounts (1x instead of 1.25x) yet never drops it and never misprices it
+  // at the ~0.1x cached-read rate.
   return calculateMeterAiUsage({
     provider: "anthropic",
     model: options.model ?? response.model ?? response.message?.model ?? "unknown",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  MeterCommitFailedError,
   MeterNetworkError,
   MeterPublicApiClient,
   MeterPublicApiError,
@@ -91,6 +92,96 @@ test("meterToolCall releases the generated reservation when protected work fails
   ]);
   assert.equal(calls[0]?.body.requestId, calls[1]?.body.requestId);
   assert.equal(calls[1]?.body.reason, "upstream failed");
+});
+
+test("meterToolCall retries a transient commit failure and returns the result", async () => {
+  const calls: string[] = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (input) => {
+      const path = new URL(String(input)).pathname;
+      calls.push(path);
+      if (path === "/api/v1/meter/commit" && calls.filter((p) => p === path).length === 1) {
+        return Response.json({ error: "internal" }, { status: 503 });
+      }
+      return Response.json({});
+    },
+  });
+
+  const result = await client.meterToolCall(
+    { customerLocalId: "customer_1", tool: "search", credits: 3 },
+    () => "expensive result"
+  );
+  assert.equal(result, "expensive result");
+  assert.deepEqual(calls, [
+    "/api/v1/meter/authorize",
+    "/api/v1/meter/commit",
+    "/api/v1/meter/commit",
+  ]);
+});
+
+test("meterToolCall throws MeterCommitFailedError carrying result and requestId when commit retries are exhausted", async () => {
+  const calls: Array<{ path: string; body: Record<string, unknown> }> = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      calls.push({ path, body: JSON.parse(String(init?.body)) });
+      if (path === "/api/v1/meter/commit") {
+        return Response.json({ error: "internal" }, { status: 500 });
+      }
+      return Response.json({});
+    },
+  });
+
+  await assert.rejects(
+    client.meterToolCall(
+      { customerLocalId: "customer_1", tool: "search", credits: 3 },
+      () => "expensive result"
+    ),
+    (error) => {
+      assert.ok(error instanceof MeterCommitFailedError);
+      assert.equal(error.result, "expensive result");
+      assert.equal(error.requestId, calls[0]?.body.requestId);
+      assert.ok(error.cause instanceof MeterPublicApiError);
+      return true;
+    }
+  );
+  // 1 authorize + 3 commit attempts; the reservation must NOT be released, the
+  // caller re-commits later with the preserved requestId.
+  assert.deepEqual(calls.map((call) => call.path), [
+    "/api/v1/meter/authorize",
+    "/api/v1/meter/commit",
+    "/api/v1/meter/commit",
+    "/api/v1/meter/commit",
+  ]);
+});
+
+test("meterToolCall does not retry commit on a 4xx response", async () => {
+  const calls: string[] = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (input) => {
+      const path = new URL(String(input)).pathname;
+      calls.push(path);
+      if (path === "/api/v1/meter/commit") {
+        return Response.json({ error: "bad_request" }, { status: 400 });
+      }
+      return Response.json({});
+    },
+  });
+
+  await assert.rejects(
+    client.meterToolCall({ customerLocalId: "customer_1", tool: "search" }, () => "ok"),
+    MeterCommitFailedError
+  );
+  assert.deepEqual(calls, ["/api/v1/meter/authorize", "/api/v1/meter/commit"]);
 });
 
 test("HTTP errors expose status, response body, path, and request ID", async () => {

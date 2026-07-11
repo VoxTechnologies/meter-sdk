@@ -23,10 +23,13 @@ test("normalizes OpenAI and Anthropic usage without double-counting cached token
     id: "msg_1",
     model: "claude-test",
     usage: { input_tokens: 70, cache_creation_input_tokens: 10, cache_read_input_tokens: 20, output_tokens: 5 },
-  });
+  }, { pricing: { inputPerMillionUsd: 3, cachedInputPerMillionUsd: 0.3, outputPerMillionUsd: 15 } });
+  // cache_creation must land in the billable input bucket (input rate), never in
+  // the ~10x-cheaper cached-read bucket: 80 * 3 + 20 * 0.3 + 5 * 15 = 321 microUSD.
   assert.equal(anthropic.inputTokens, 80);
   assert.equal(anthropic.cachedInputTokens, 20);
   assert.equal(anthropic.totalTokens, 105);
+  assert.equal(anthropic.costMicrousd, 321);
 });
 
 test("buyer handler authenticates and creates an origin-bound session", async () => {
