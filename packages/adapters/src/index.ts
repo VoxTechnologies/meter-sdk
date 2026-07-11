@@ -1,4 +1,54 @@
-import { MeterPublicApiClient } from "@meter/sdk";
+import {
+  MeterPublicApiClient,
+  calculateMeterAiUsage,
+  type MeterAiTokenPricing,
+  type MeterAiUsage,
+} from "@meter/sdk";
+
+export type MeterAiAdapterOptions = {
+  model?: string;
+  pricing?: MeterAiTokenPricing;
+  costUsd?: number;
+  providerRequestId?: string;
+};
+
+type UnknownRecord = Record<string, any>;
+
+export function aiUsageFromOpenAI(response: UnknownRecord, options: MeterAiAdapterOptions = {}): MeterAiUsage {
+  const usage = response.usage ?? response.response?.usage ?? {};
+  const inputDetails = usage.input_tokens_details ?? usage.prompt_tokens_details ?? {};
+  const outputDetails = usage.output_tokens_details ?? usage.completion_tokens_details ?? {};
+  const cachedInputTokens = inputDetails.cached_tokens ?? 0;
+  const rawInputTokens = usage.input_tokens ?? usage.prompt_tokens ?? 0;
+  return calculateMeterAiUsage({
+    provider: "openai",
+    model: options.model ?? response.model ?? response.response?.model ?? "unknown",
+    inputTokens: Math.max(0, rawInputTokens - cachedInputTokens),
+    outputTokens: usage.output_tokens ?? usage.completion_tokens ?? 0,
+    cachedInputTokens,
+    reasoningTokens: outputDetails.reasoning_tokens ?? 0,
+    requests: 1,
+    costUsd: options.costUsd,
+    pricing: options.pricing,
+    providerRequestId: options.providerRequestId ?? response.id ?? response.response?.id,
+  });
+}
+
+export function aiUsageFromAnthropic(response: UnknownRecord, options: MeterAiAdapterOptions = {}): MeterAiUsage {
+  const usage = response.usage ?? response.message?.usage ?? {};
+  return calculateMeterAiUsage({
+    provider: "anthropic",
+    model: options.model ?? response.model ?? response.message?.model ?? "unknown",
+    inputTokens: (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0),
+    outputTokens: usage.output_tokens ?? 0,
+    cachedInputTokens: usage.cache_read_input_tokens ?? 0,
+    reasoningTokens: 0,
+    requests: 1,
+    costUsd: options.costUsd,
+    pricing: options.pricing,
+    providerRequestId: options.providerRequestId ?? response.id ?? response.message?.id,
+  });
+}
 
 export type MeterAuthenticatedUser = {
   id: string;

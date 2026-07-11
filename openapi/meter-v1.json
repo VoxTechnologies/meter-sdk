@@ -2,14 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Meter Public API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Service-scoped prepaid credits, buyer accounts, usage reservations, and metered MCP usage for Meter integrations."
   },
   "servers": [
-    {
-      "url": "https://meter-mcp.vercel.app",
-      "description": "Meter hosted API"
-    },
     {
       "url": "http://localhost:3000",
       "description": "Local Meter server"
@@ -266,6 +262,59 @@
         "responses": {
           "200": {
             "description": "Updated service integration"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/ai-model-prices": {
+      "get": {
+        "tags": [
+          "Metering"
+        ],
+        "summary": "List versioned fallback AI model prices",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI model prices"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Metering"
+        ],
+        "summary": "Create or update a versioned fallback AI model price",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiModelPriceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated AI model price list"
           },
           "400": {
             "$ref": "#/components/responses/Error"
@@ -2104,6 +2153,226 @@
           }
         }
       },
+      "AiTokenPricing": {
+        "type": "object",
+        "properties": {
+          "inputPerMillionUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "outputPerMillionUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "cachedInputPerMillionUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reasoningPerMillionUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "requestUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "AiUsage": {
+        "type": "object",
+        "required": [
+          "provider",
+          "model"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cachedInputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reasoningTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "readOnly": true
+          },
+          "requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "costUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "costMicrousd": {
+            "type": "integer",
+            "minimum": 0,
+            "readOnly": true
+          },
+          "costSource": {
+            "type": "string",
+            "enum": [
+              "reported",
+              "calculated",
+              "unpriced"
+            ],
+            "readOnly": true
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/AiTokenPricing"
+          },
+          "providerRequestId": {
+            "type": "string"
+          }
+        }
+      },
+      "AiModelPriceInput": {
+        "type": "object",
+        "required": [
+          "provider",
+          "model",
+          "version",
+          "pricing"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/AiTokenPricing"
+          },
+          "effectiveFrom": {
+            "type": "integer"
+          }
+        }
+      },
+      "AiCostRollup": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "calls": {
+            "type": "integer"
+          },
+          "measuredCalls": {
+            "type": "integer"
+          },
+          "unpricedCalls": {
+            "type": "integer"
+          },
+          "credits": {
+            "type": "integer"
+          },
+          "inputTokens": {
+            "type": "integer"
+          },
+          "outputTokens": {
+            "type": "integer"
+          },
+          "cachedInputTokens": {
+            "type": "integer"
+          },
+          "reasoningTokens": {
+            "type": "integer"
+          },
+          "totalTokens": {
+            "type": "integer"
+          },
+          "aiCostMicrousd": {
+            "type": "integer"
+          },
+          "aiCostUsd": {
+            "type": "number"
+          },
+          "grossUsd": {
+            "type": "number"
+          },
+          "grossProfitUsd": {
+            "type": "number"
+          },
+          "grossMarginPct": {
+            "type": "number"
+          }
+        }
+      },
+      "AiCostAnalytics": {
+        "type": "object",
+        "required": [
+          "summary",
+          "byModel",
+          "byTool",
+          "byCustomer"
+        ],
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/AiCostRollup"
+          },
+          "byModel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiCostRollup"
+            }
+          },
+          "byTool": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiCostRollup"
+            }
+          },
+          "byCustomer": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiCostRollup"
+            }
+          }
+        }
+      },
       "UsageEvent": {
         "type": "object",
         "required": [
@@ -2149,6 +2418,9 @@
           },
           "provider": {
             "type": "string"
+          },
+          "aiUsage": {
+            "$ref": "#/components/schemas/AiUsage"
           }
         }
       },
@@ -2161,7 +2433,8 @@
           "byTool",
           "byProduct",
           "revenueShare",
-          "recent"
+          "recent",
+          "aiCosts"
         ],
         "properties": {
           "service": {
@@ -2199,6 +2472,9 @@
             "items": {
               "$ref": "#/components/schemas/UsageEvent"
             }
+          },
+          "aiCosts": {
+            "$ref": "#/components/schemas/AiCostAnalytics"
           }
         }
       },
@@ -2405,6 +2681,9 @@
           },
           "requestId": {
             "type": "string"
+          },
+          "aiUsage": {
+            "$ref": "#/components/schemas/AiUsage"
           }
         }
       },

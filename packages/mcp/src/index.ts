@@ -4,6 +4,7 @@ import {
   MeterPublicApiClient,
   MeterPublicApiError,
   type MeterToolCall,
+  type MeterAiUsageInput,
 } from "@meter/sdk";
 
 export type MeteredToolContext<TInput, TExtra> = {
@@ -18,6 +19,10 @@ export type MeteredToolOptions<TInput, TExtra> = {
   product?: string | ((context: MeteredToolContext<TInput, TExtra>) => string | undefined | Promise<string | undefined>);
   requestId?: (context: MeteredToolContext<TInput, TExtra>) => string | undefined | Promise<string | undefined>;
   reservationTtlMs?: number;
+  aiUsage?: (
+    result: unknown,
+    context: MeteredToolContext<TInput, TExtra>
+  ) => MeterAiUsageInput | Promise<MeterAiUsageInput>;
 };
 
 export type McpPaymentRequiredResult = {
@@ -82,7 +87,11 @@ export function paidTool<TInput, TExtra, TResult>(
       requestId,
       reservationTtlMs: options.reservationTtlMs,
     };
-    return meter.withUsage(usage, () => handler(input, extra));
+    return meter.withUsage(usage, () => handler(input, extra), {
+      aiUsage: options.aiUsage
+        ? async (result) => options.aiUsage!(result, context)
+        : undefined,
+    });
   };
 }
 

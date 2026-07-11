@@ -46,6 +46,35 @@ const result = await meter.withUsage(
 commits usage on success, and releases the reservation when the work throws.
 Supply your own `requestId` when retrying work across process boundaries.
 
+## Track AI cost and gross margin
+
+AI usage is attached only when protected work succeeds and Meter commits the
+billing transaction. Resolve it from the provider response:
+
+```ts
+import { aiUsageFromOpenAI } from "@meter/adapters";
+
+await meter.withUsage(usage, callOpenAI, {
+  aiUsage: (response) => aiUsageFromOpenAI(response, {
+    pricing: {
+      inputPerMillionUsd: 2,
+      outputPerMillionUsd: 8,
+      cachedInputPerMillionUsd: 0.5,
+      version: "provider-price-sheet-2026-07-11",
+    },
+  }),
+});
+```
+
+Use `costUsd` when the AI provider or gateway returns actual billed cost.
+Meter stores micro-USD integers and distinguishes reported, calculated, and
+unpriced usage. Prices are supplied explicitly instead of silently pinned in
+the SDK, so provider price changes remain auditable.
+
+For integrations that cannot attach pricing on every request, configure a
+service-scoped fallback with `upsertAiModelPrice`. Meter versions and retains
+these prices and applies the latest effective version only to unpriced usage.
+
 ## Handle billing errors
 
 ```ts

@@ -1,3 +1,5 @@
+import type { MeterAiUsage, MeterAiUsageInput } from "./ai-cost.js";
+
 export type MeterPublicApiClientOptions = {
   baseUrl: string;
   serviceId: string;
@@ -55,6 +57,17 @@ export type MeterIntegrationUpdate = Partial<
 > & {
   upstreamAuthSecret?: string | null;
   oauthClientSecret?: string | null;
+};
+
+export type MeterAiModelPrice = {
+  serviceId: string;
+  provider: string;
+  model: string;
+  pricing: import("./ai-cost.js").MeterAiTokenPricing;
+  version: string;
+  effectiveFrom: number;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type MeterWebhookEndpoint = {
@@ -120,6 +133,36 @@ export type MeterUsageRollup = {
   providerPayoutUsd?: number;
 };
 
+export type MeterAiCostRollup = {
+  serviceId: string;
+  provider?: string;
+  model?: string;
+  tool?: string;
+  customerId?: string;
+  customerName?: string;
+  calls: number;
+  measuredCalls: number;
+  unpricedCalls: number;
+  credits: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  aiCostMicrousd: number;
+  aiCostUsd: number;
+  grossUsd: number;
+  grossProfitUsd: number;
+  grossMarginPct?: number;
+};
+
+export type MeterAiCostAnalytics = {
+  summary: MeterAiCostRollup;
+  byModel: MeterAiCostRollup[];
+  byTool: MeterAiCostRollup[];
+  byCustomer: MeterAiCostRollup[];
+};
+
 export type MeterUsageReport = {
   service: MeterService;
   creditUsd: number;
@@ -128,6 +171,7 @@ export type MeterUsageReport = {
   byProduct: MeterUsageRollup[];
   revenueShare: MeterUsageRollup[];
   recent: MeterUsageEvent[];
+  aiCosts: MeterAiCostAnalytics;
 };
 
 export type MeterCustomer = {
@@ -185,6 +229,7 @@ export type MeterUsageEvent = {
   tool: string;
   credits: number;
   provider: string;
+  aiUsage?: MeterAiUsage;
 };
 
 export type MeterCreditLedgerEntry = {
@@ -209,6 +254,7 @@ export type MeterToolCall = {
   providerId?: string;
   productId?: string;
   requestId?: string;
+  aiUsage?: MeterAiUsageInput | MeterAiUsage;
 };
 
 export type MeterCustomerAccountEnvelope = {
@@ -427,6 +473,20 @@ export class MeterPublicApiClient {
       method: "PUT",
       body: { ...input },
     });
+  }
+
+  async listAiModelPrices(): Promise<{ service: MeterService; prices: MeterAiModelPrice[] }> {
+    return this.request(this.servicePath("/ai-model-prices"));
+  }
+
+  async upsertAiModelPrice(input: {
+    provider: string;
+    model: string;
+    version: string;
+    pricing: import("./ai-cost.js").MeterAiTokenPricing;
+    effectiveFrom?: number;
+  }): Promise<{ service: MeterService; price: MeterAiModelPrice; prices: MeterAiModelPrice[] }> {
+    return this.request(this.servicePath("/ai-model-prices"), { method: "PUT", body: input });
   }
 
   async listWebhookEndpoints(limit?: number): Promise<{
@@ -656,7 +716,8 @@ export class MeterPublicApiClient {
 
   async meterToolCall<T>(
     input: MeterToolCall & { reservationTtlMs?: number },
-    run: () => Promise<T> | T
+    run: () => Promise<T> | T,
+    options: { aiUsage?: MeterAiUsageInput | ((result: T) => MeterAiUsageInput | Promise<MeterAiUsageInput>) } = {}
   ): Promise<T> {
     const usage = { ...input, requestId: input.requestId ?? crypto.randomUUID() };
     await this.authorize(usage);
@@ -671,15 +732,17 @@ export class MeterPublicApiClient {
       }).catch(() => undefined);
       throw err;
     }
-    await this.commit(usage);
+    const aiUsage = typeof options.aiUsage === "function" ? await options.aiUsage(result) : options.aiUsage;
+    await this.commit({ ...usage, aiUsage: aiUsage ?? usage.aiUsage });
     return result;
   }
 
   async withUsage<T>(
     input: MeterToolCall & { reservationTtlMs?: number },
-    run: () => Promise<T> | T
+    run: () => Promise<T> | T,
+    options: { aiUsage?: MeterAiUsageInput | ((result: T) => MeterAiUsageInput | Promise<MeterAiUsageInput>) } = {}
   ): Promise<T> {
-    return this.meterToolCall(input, run);
+    return this.meterToolCall(input, run, options);
   }
 
   async usage(limit?: number): Promise<MeterUsageReport> {

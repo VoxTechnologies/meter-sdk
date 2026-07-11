@@ -35,6 +35,34 @@ test("meterToolCall uses one generated request ID for authorize and commit", asy
   assert.equal(calls[0]?.body.serviceId, "service_1");
 });
 
+test("meterToolCall attaches AI usage resolved from the protected result only to commit", async () => {
+  const calls: Array<{ path: string; body: any }> = [];
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.test",
+    serviceId: "service_1",
+    serviceApiKey: "secret",
+    fetchImpl: async (url, init) => {
+      calls.push({ path: new URL(String(url)).pathname, body: JSON.parse(String(init?.body)) });
+      return Response.json(calls.length === 1
+        ? { authorized: true, service: {}, customer: {}, quote: {}, balanceCredits: 10 }
+        : { committed: true, duplicate: false, service: {}, event: {}, balanceCredits: 9 });
+    },
+  });
+  await client.meterToolCall(
+    { customerLocalId: "buyer", tool: "answer", credits: 1 },
+    async () => ({ usage: { input: 10, output: 4 } }),
+    { aiUsage: (result) => ({ provider: "openai", model: "gpt-test", inputTokens: result.usage.input, outputTokens: result.usage.output, costUsd: 0.002 }) }
+  );
+  assert.equal(calls[0].body.aiUsage, undefined);
+  assert.deepEqual(calls[1].body.aiUsage, {
+    provider: "openai",
+    model: "gpt-test",
+    inputTokens: 10,
+    outputTokens: 4,
+    costUsd: 0.002,
+  });
+});
+
 test("meterToolCall releases the generated reservation when protected work fails", async () => {
   const calls: Array<{ path: string; body: Record<string, unknown> }> = [];
   const client = new MeterPublicApiClient({

@@ -2,11 +2,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { MeterPublicApiClient } from "@meter/sdk";
 import {
+  aiUsageFromAnthropic,
+  aiUsageFromOpenAI,
   createBuyerPortalHandler,
   createBuyerPortalRedirectHandler,
   createOperatorConsoleHandler,
   toExpressHandler,
 } from "../src/index.js";
+
+test("normalizes OpenAI and Anthropic usage without double-counting cached tokens", () => {
+  const openai = aiUsageFromOpenAI({
+    id: "resp_1",
+    model: "gpt-test",
+    usage: { input_tokens: 100, output_tokens: 20, input_tokens_details: { cached_tokens: 40 }, output_tokens_details: { reasoning_tokens: 5 } },
+  }, { pricing: { inputPerMillionUsd: 1, cachedInputPerMillionUsd: 0.1, outputPerMillionUsd: 2 } });
+  assert.equal(openai.inputTokens, 60);
+  assert.equal(openai.cachedInputTokens, 40);
+  assert.equal(openai.totalTokens, 125);
+  const anthropic = aiUsageFromAnthropic({
+    id: "msg_1",
+    model: "claude-test",
+    usage: { input_tokens: 70, cache_creation_input_tokens: 10, cache_read_input_tokens: 20, output_tokens: 5 },
+  });
+  assert.equal(anthropic.inputTokens, 80);
+  assert.equal(anthropic.cachedInputTokens, 20);
+  assert.equal(anthropic.totalTokens, 105);
+});
 
 test("buyer handler authenticates and creates an origin-bound session", async () => {
   let received: unknown;

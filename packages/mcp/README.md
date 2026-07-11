@@ -30,6 +30,7 @@ registerPaidTool({
     credits: 8,
     provider: ({ input }) => `creator:${input.creatorId}`,
     product: ({ input }) => input.productId,
+    aiUsage: (result) => result.aiUsage,
   },
   handler: searchKnowledge,
 });

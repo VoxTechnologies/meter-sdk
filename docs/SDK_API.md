@@ -22,6 +22,7 @@ Service and integration methods:
 - `health`, `listServices`, `updateService`
 - `listApiKeys`, `createApiKey`, `revokeApiKey`
 - `getIntegration`, `updateIntegration`
+- `listAiModelPrices`, `upsertAiModelPrice`
 - `listWebhookEndpoints`, `createWebhookEndpoint`, `disableWebhookEndpoint`, `testWebhooks`
 
 Customer methods:
@@ -62,6 +63,14 @@ UTF-8 byte arrays and supports multiple `v1` signatures for key rotation.
 Mutating requests are not automatically retried. Reuse the same idempotency or
 request ID when retrying after an unknown network outcome.
 
+### AI cost observability
+
+`MeterAiUsageInput` records provider, model, uncached input, cached input,
+output, reasoning tokens, request count, provider request ID, and either actual
+`costUsd` or versioned `MeterAiTokenPricing`. `calculateMeterAiUsage` performs
+integer micro-USD calculation. `usage()` returns model/tool/customer cost
+rollups with gross revenue, gross profit, margin, and unpriced-call counts.
+
 ## `@meter/mcp`
 
 - `paidTool`: wraps an arbitrary async tool handler.
@@ -79,6 +88,8 @@ product, request ID, and reservation TTL.
 - `createOperatorConsoleHandler`
 - `createOperatorConsoleRedirectHandler`
 - `toExpressHandler`
+- `aiUsageFromOpenAI`
+- `aiUsageFromAnthropic`
 
 The provider must authenticate users and authorize operators before a session
 is created. Hosted session origins are bound to the incoming request origin by

@@ -56,6 +56,13 @@ app.get(
 Authentication and authorization remain the provider's responsibility. Never
 accept a customer or operator identity directly from an untrusted request.
 
+## AI provider usage
+
+`aiUsageFromOpenAI` accepts Responses or Chat Completions usage shapes.
+`aiUsageFromAnthropic` accepts Messages usage, including cache creation and
+cache-read tokens. Pass explicit versioned pricing or actual `costUsd`, then
+attach the result through `meter.withUsage(..., { aiUsage })`.
+
 Both ESM `import` and CommonJS `require` are supported on Node.js 20 or newer.
 
 ## License
