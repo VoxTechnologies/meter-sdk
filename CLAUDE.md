@@ -13,7 +13,7 @@ Never commit service keys, webhook secrets, customer data, or internal server de
 ```bash
 npm install
 npm run verify            # the gate: build + test + typecheck + publint/attw + OpenAPI + packed-consumer install + npm audit
-npm run build             # tsup ESM+CJS+dts for all three packages
+npm run build             # tsup ESM+CJS+dts for all four packages
 npm test                  # node:test via tsx across all packages
 npm run typecheck
 npm run changeset         # required for any user-visible change
@@ -33,11 +33,12 @@ There is no ESLint/Prettier config; `npm run lint:packages` lints *package metad
 
 ## Architecture
 
-Three npm workspaces under `packages/`, published together at a **single shared version** (Changesets `fixed` group; `scripts/verify-sdk-release.mjs` fails the release if versions diverge):
+Four npm workspaces under `packages/`, published together at a **single shared version** (Changesets `fixed` group; `scripts/verify-sdk-release.mjs` fails the release if versions diverge):
 
 - `@meter-mcp/sdk` — zero-dependency HTTP client (`MeterPublicApiClient`), AI-cost math, webhook signature verification. Everything else depends on it.
 - `@meter-mcp/mcp` — `paidTool` / `registerPaidTool`, which wrap an MCP tool handler in billing and translate a `402`-style error body into an MCP error result.
 - `@meter-mcp/adapters` — provider usage extractors (`aiUsageFromOpenAI` / `aiUsageFromAnthropic`) and Web-`Request`/`Response` handlers for buyer-portal and operator-console sessions, plus an Express bridge.
+- `@meter-mcp/cli` — the `meter` bin for provider developers: `login` / `init` (scaffolds an embedded-metering MCP server from `packages/cli/templates`, which ship in the tarball) / resource CRUD / `usage` + `events tail` / `webhooks` + `listen` (poll-mode webhook forwarding with client-side HMAC signing) / `call`. Commands are pure `run*(ctx, …)` functions in `src/commands/`; `src/cli.ts` only wires commander. Three wiring bugs unit tests cannot catch live in commander/bundle land — bin symlink vs `import.meta.url` realpath, global-vs-subcommand option shadowing, bundled-`dist` resource paths — which is why `test/init.test.ts` spawns the **built** `dist/cli.js` end-to-end; keep that test alive.
 
 ### The billing lifecycle
 
