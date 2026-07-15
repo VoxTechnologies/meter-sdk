@@ -25,6 +25,12 @@ import {
   runLedger,
 } from "./commands/customers.js";
 import { runEventsTail, runUsage } from "./commands/usage.js";
+import {
+  runWebhooksCreate,
+  runWebhooksDelete,
+  runWebhooksList,
+  runWebhooksTest,
+} from "./commands/webhooks.js";
 import { CliError } from "./config.js";
 import { nodeIo, createContext, type CliContext } from "./context.js";
 
@@ -257,6 +263,41 @@ events
       tool: opts.tool,
       intervalMs: opts.interval,
     });
+  });
+
+const webhooks = program.command("webhooks").description("Manage webhook endpoints");
+
+webhooks
+  .command("list")
+  .description("List webhook endpoints and recent deliveries")
+  .action(async () => {
+    await runWebhooksList(contextFromProgram());
+  });
+
+webhooks
+  .command("create <url>")
+  .description("Create a push webhook endpoint (prints the signing secret once)")
+  .option("--events <a,b>", "comma-separated event types")
+  .action(async (url, opts) => {
+    await runWebhooksCreate(
+      contextFromProgram(),
+      url,
+      opts.events ? String(opts.events).split(",") : undefined
+    );
+  });
+
+webhooks
+  .command("delete <id>")
+  .description("Disable a webhook endpoint")
+  .action(async (id) => {
+    await runWebhooksDelete(contextFromProgram(), id);
+  });
+
+webhooks
+  .command("test")
+  .description("Send a test event to all registered endpoints")
+  .action(async () => {
+    await runWebhooksTest(contextFromProgram());
   });
 
 export function handleError(error: unknown): void {
