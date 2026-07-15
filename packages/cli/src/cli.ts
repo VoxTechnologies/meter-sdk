@@ -24,6 +24,7 @@ import {
   runKeysRevoke,
   runLedger,
 } from "./commands/customers.js";
+import { runEventsTail, runUsage } from "./commands/usage.js";
 import { CliError } from "./config.js";
 import { nodeIo, createContext, type CliContext } from "./context.js";
 
@@ -231,6 +232,31 @@ program
   .option("--limit <n>", "max rows to return", Number)
   .action(async (localId, opts) => {
     await runLedger(contextFromProgram(), localId, opts.limit);
+  });
+
+program
+  .command("usage")
+  .description("Show usage rollups")
+  .option("--by <tool|customer>", "rollup dimension")
+  .option("--limit <n>", "max recent events to fetch", Number)
+  .action(async (opts) => {
+    await runUsage(contextFromProgram(), { by: opts.by, limit: opts.limit });
+  });
+
+const events = program.command("events").description("Inspect usage events");
+
+events
+  .command("tail")
+  .description("Follow new usage events")
+  .option("--customer <localId>", "filter by customer")
+  .option("--tool <name>", "filter by tool")
+  .option("--interval <ms>", "poll interval in milliseconds", Number)
+  .action(async (opts) => {
+    await runEventsTail(contextFromProgram(), {
+      customer: opts.customer,
+      tool: opts.tool,
+      intervalMs: opts.interval,
+    });
   });
 
 export function handleError(error: unknown): void {
