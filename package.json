@@ -8,10 +8,11 @@
   "packageManager": "npm@11.3.0",
   "scripts": {
     "build": "npm run build -w @meter-mcp/sdk && npm run build -w @meter-mcp/mcp && npm run build -w @meter-mcp/adapters && npm run build -w @meter-mcp/cli",
-    "typecheck": "npm run typecheck -w @meter-mcp/sdk && npm run typecheck -w @meter-mcp/mcp && npm run typecheck -w @meter-mcp/adapters && npm run typecheck -w @meter-mcp/cli && npm run typecheck:examples",
+    "typecheck": "npm run typecheck -w @meter-mcp/sdk && npm run typecheck -w @meter-mcp/mcp && npm run typecheck -w @meter-mcp/adapters && npm run typecheck -w @meter-mcp/cli && npm run typecheck:examples && npm run typecheck:templates",
     "test": "npm test -w @meter-mcp/sdk && npm test -w @meter-mcp/mcp && npm test -w @meter-mcp/adapters && npm test -w @meter-mcp/cli",
     "lint:packages": "publint packages/sdk && publint packages/mcp && publint packages/adapters && attw --pack packages/sdk && attw --pack packages/mcp && attw --pack packages/adapters && publint packages/cli && attw --pack packages/cli",
     "typecheck:examples": "tsc -p examples/meter-sdk/tsconfig.json",
+    "typecheck:templates": "tsc -p packages/cli/templates/tsconfig.json",
     "verify:openapi": "node scripts/verify-openapi.mjs",
     "audit:release": "npm audit --audit-level=low",
     "verify": "npm run build && npm run test && npm run typecheck && npm run lint:packages && npm run verify:openapi && node scripts/verify-sdk-packages.mjs && npm run audit:release",
@@ -21,11 +22,13 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^2.29.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/node": "^24.0.0",
     "publint": "^0.3.21",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "zod": "^3.25.76"
   },
   "overrides": {
     "tsup": { "esbuild": "^0.28.1" }

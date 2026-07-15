@@ -26,6 +26,7 @@ import {
 } from "./commands/customers.js";
 import { runEventsTail, runUsage } from "./commands/usage.js";
 import { runCall } from "./commands/call.js";
+import { runInit } from "./commands/init.js";
 import {
   runListen,
   runWebhooksCreate,
@@ -331,6 +332,26 @@ program
       customer: opts.customer,
       url: opts.url,
       grantCredits: opts.grant,
+    });
+  });
+
+program
+  .command("init [name]")
+  .description("Scaffold an embedded-metering MCP server and register its Meter service")
+  .option("--dir <path>", "target directory (defaults to the project name)")
+  .option("--base-url <url>", "Meter base URL")
+  .option("--onboarding-key <key>", "onboarding API key used to create the service")
+  .option("--use-profile <name>", "reuse an existing profile's service instead of creating one")
+  .option("--no-install", "skip running npm install in the new project")
+  .action(async (name, opts) => {
+    await runInit({
+      name,
+      dir: opts.dir,
+      baseUrl: opts.baseUrl,
+      onboardingKey: opts.onboardingKey,
+      useProfile: opts.useProfile,
+      install: opts.install,
+      io: nodeIo(),
     });
   });
 
