@@ -13,6 +13,17 @@ import {
   runServicesGet,
   runServicesUpdate,
 } from "./commands/services.js";
+import {
+  runBalance,
+  runCustomersGet,
+  runCustomersGrant,
+  runCustomersList,
+  runCustomersSetStatus,
+  runKeysCreate,
+  runKeysList,
+  runKeysRevoke,
+  runLedger,
+} from "./commands/customers.js";
 import { CliError } from "./config.js";
 import { nodeIo, createContext, type CliContext } from "./context.js";
 
@@ -143,6 +154,83 @@ prices
   .description("Set the credit price for a tool")
   .action(async (tool, credits) => {
     await runPricesSet(contextFromProgram(), tool, Number(credits));
+  });
+
+const keys = program.command("keys").description("Manage service API keys");
+
+keys
+  .command("list")
+  .description("List API keys")
+  .action(async () => {
+    await runKeysList(contextFromProgram());
+  });
+
+keys
+  .command("create [name]")
+  .description("Create an API key (prints the secret once)")
+  .action(async (name) => {
+    await runKeysCreate(contextFromProgram(), name);
+  });
+
+keys
+  .command("revoke <id>")
+  .description("Revoke an API key")
+  .action(async (id) => {
+    await runKeysRevoke(contextFromProgram(), id);
+  });
+
+const customers = program.command("customers").description("Manage customer accounts");
+
+customers
+  .command("list")
+  .description("List customer accounts")
+  .option("--limit <n>", "max rows to return", Number)
+  .action(async (opts) => {
+    await runCustomersList(contextFromProgram(), opts.limit);
+  });
+
+customers
+  .command("get <localId>")
+  .description("Show a customer account")
+  .action(async (localId) => {
+    await runCustomersGet(contextFromProgram(), localId);
+  });
+
+customers
+  .command("grant <localId> <credits>")
+  .description("Grant (or claw back, if negative) credits to a customer")
+  .option("--reason <text>", "note attached to the adjustment")
+  .action(async (localId, credits, opts) => {
+    await runCustomersGrant(contextFromProgram(), localId, Number(credits), { reason: opts.reason });
+  });
+
+customers
+  .command("suspend <localId>")
+  .description("Suspend a customer account")
+  .action(async (localId) => {
+    await runCustomersSetStatus(contextFromProgram(), localId, "suspended");
+  });
+
+customers
+  .command("resume <localId>")
+  .description("Resume a suspended customer account")
+  .action(async (localId) => {
+    await runCustomersSetStatus(contextFromProgram(), localId, "active");
+  });
+
+program
+  .command("balance <localId>")
+  .description("Show a customer's balance")
+  .action(async (localId) => {
+    await runBalance(contextFromProgram(), localId);
+  });
+
+program
+  .command("ledger <localId>")
+  .description("Show a customer's ledger")
+  .option("--limit <n>", "max rows to return", Number)
+  .action(async (localId, opts) => {
+    await runLedger(contextFromProgram(), localId, opts.limit);
   });
 
 export function handleError(error: unknown): void {
