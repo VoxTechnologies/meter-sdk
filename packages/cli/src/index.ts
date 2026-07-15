@@ -1,4 +1,6 @@
 export const cliName = "meter";
 
 export * from "./config.js";
-// Task 4+ re-export context/commands from here.
+export * from "./context.js";
+export * from "./output.js";
+// Task 5+ re-export commands from here.
