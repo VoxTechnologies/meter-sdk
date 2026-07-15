@@ -4,14 +4,60 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { MeterPublicApiError } from "@meter-mcp/sdk";
+import { runLogin, runLogout, runWhoami } from "./commands/auth.js";
 import { CliError } from "./config.js";
+import { nodeIo, createContext, type CliContext } from "./context.js";
 
 const require = createRequire(import.meta.url);
 export const cliVersion = (require("../package.json") as { version: string }).version;
 
 export const program = new Command("meter")
   .description("Meter CLI for MCP service providers")
-  .version(cliVersion);
+  .version(cliVersion)
+  .option("--profile <name>", "config profile", "default")
+  .option("--json", "machine-readable output")
+  .option("--base-url <url>", "override the profile's base URL")
+  .option("--service-id <id>", "override the profile's service ID")
+  .option("--api-key <key>", "override the profile's API key");
+
+function contextFromProgram(): CliContext {
+  const opts = program.opts();
+  return createContext(
+    {
+      profile: opts.profile,
+      baseUrl: opts.baseUrl,
+      serviceId: opts.serviceId,
+      apiKey: opts.apiKey,
+      json: Boolean(opts.json),
+    },
+    nodeIo()
+  );
+}
+
+program
+  .command("login")
+  .description("Save credentials for a Meter service")
+  .action(async () => {
+    const opts = program.opts();
+    await runLogin(
+      { profile: opts.profile, baseUrl: opts.baseUrl, serviceId: opts.serviceId, apiKey: opts.apiKey },
+      nodeIo()
+    );
+  });
+
+program
+  .command("logout")
+  .description("Remove the profile")
+  .action(() => {
+    runLogout({ profile: program.opts().profile }, nodeIo());
+  });
+
+program
+  .command("whoami")
+  .description("Show the authenticated service")
+  .action(async () => {
+    await runWhoami(contextFromProgram());
+  });
 
 export function handleError(error: unknown): void {
   if (error instanceof CliError) {
