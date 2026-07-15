@@ -25,6 +25,7 @@ import {
   runLedger,
 } from "./commands/customers.js";
 import { runEventsTail, runUsage } from "./commands/usage.js";
+import { runCall } from "./commands/call.js";
 import {
   runListen,
   runWebhooksCreate,
@@ -313,6 +314,23 @@ program
       forwardTo: options.forwardTo,
       events: options.events.split(",").map((event) => event.trim()),
       signal: controller.signal,
+    });
+  });
+
+program
+  .command("call <tool>")
+  .description("Call an MCP tool for testing (direct to --url, or via the gateway)")
+  .option("--args <json>", "JSON-encoded tool arguments")
+  .option("--customer <localId>", "buyer customer local ID", "cli-test")
+  .option("--url <mcpUrl>", "call a local MCP server directly instead of the gateway")
+  .option("--grant <credits>", "initial credits to grant a newly created test customer", Number)
+  .action(async (tool, opts) => {
+    await runCall(contextFromProgram(), {
+      tool,
+      args: opts.args,
+      customer: opts.customer,
+      url: opts.url,
+      grantCredits: opts.grant,
     });
   });
 
