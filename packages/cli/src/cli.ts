@@ -43,7 +43,7 @@ export const cliVersion = (require("../package.json") as { version: string }).ve
 export const program = new Command("meter")
   .description("Meter CLI for MCP service providers")
   .version(cliVersion)
-  .option("--profile <name>", "config profile", "default")
+  .option("--profile <name>", "config profile")
   .option("--json", "machine-readable output")
   .option("--base-url <url>", "override the profile's base URL")
   .option("--service-id <id>", "override the profile's service ID")
@@ -69,7 +69,12 @@ program
   .action(async () => {
     const opts = program.opts();
     await runLogin(
-      { profile: opts.profile, baseUrl: opts.baseUrl, serviceId: opts.serviceId, apiKey: opts.apiKey },
+      {
+        profile: opts.profile ?? "default",
+        baseUrl: opts.baseUrl,
+        serviceId: opts.serviceId,
+        apiKey: opts.apiKey,
+      },
       nodeIo()
     );
   });
@@ -78,7 +83,7 @@ program
   .command("logout")
   .description("Remove the profile")
   .action(() => {
-    runLogout({ profile: program.opts().profile }, nodeIo());
+    runLogout({ profile: program.opts().profile ?? "default" }, nodeIo());
   });
 
 program

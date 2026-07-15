@@ -117,6 +117,11 @@ test("init resolves templates from the BUILT bundle end-to-end", async (t) => {
       );
       return;
     }
+    if (req.method === "GET" && req.url === "/api/v1/services/distproj/api-keys") {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ service: { id: "distproj", name: "distproj" }, apiKeys: [] }));
+      return;
+    }
     res.statusCode = 404;
     res.end();
   });
@@ -158,6 +163,28 @@ test("init resolves templates from the BUILT bundle end-to-end", async (t) => {
     assert.match(env, /METER_SERVICE_API_KEY=sk_dist/);
     const savedConfig = loadCliConfig(join(xdg, "meter", "config.json"));
     assert.equal(savedConfig.profiles.distproj?.testCustomerApiKey, "cust_sk_dist");
+
+    // Regression: `--profile` used to carry a commander default of "default", so
+    // resolveConnection's `overrides.profile ?? config.activeProfile` fallback never
+    // fired and every command without an explicit --profile looked up a nonexistent
+    // "default" profile instead of the activeProfile init just set ("distproj").
+    const whoamiChild = spawn(process.execPath, [distCli, "whoami", "--json"], {
+      env: { ...process.env, XDG_CONFIG_HOME: xdg },
+    });
+    let whoamiStdout = "";
+    let whoamiStderr = "";
+    whoamiChild.stdout.on("data", (d) => (whoamiStdout += d));
+    whoamiChild.stderr.on("data", (d) => (whoamiStderr += d));
+    const whoamiStatus = await new Promise<number | null>((resolve) =>
+      whoamiChild.on("close", (code) => resolve(code))
+    );
+
+    assert.equal(
+      whoamiStatus,
+      0,
+      `whoami exited ${whoamiStatus}\nstdout:\n${whoamiStdout}\nstderr:\n${whoamiStderr}`
+    );
+    assert.match(whoamiStdout, /distproj/);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
