@@ -274,3 +274,77 @@ test("configured tenant cannot be overridden by untyped runtime input", async ()
   } as never);
   assert.equal(body.serviceId, "trusted_service");
 });
+
+test("pollWebhookDeliveries long-polls the pending route", async () => {
+  let captured: URL | null = null;
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "svc",
+    serviceApiKey: "secret",
+    fetchImpl: async (input) => {
+      captured = new URL(String(input));
+      return Response.json({ deliveries: [{ id: "wd_1", payload: { type: "test.event" } }] });
+    },
+  });
+  const result = await client.pollWebhookDeliveries("wh_1", { wait: 25, limit: 10 });
+  assert.equal(result.deliveries[0]?.id, "wd_1");
+  assert.equal(
+    captured?.pathname,
+    "/api/v1/services/svc/webhook-endpoints/wh_1/deliveries/pending"
+  );
+  assert.equal(captured?.searchParams.get("wait"), "25");
+  assert.equal(captured?.searchParams.get("limit"), "10");
+});
+
+test("ackWebhookDeliveries posts ids", async () => {
+  let capturedBody: Record<string, unknown> = {};
+  let capturedPath = "";
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "svc",
+    serviceApiKey: "secret",
+    fetchImpl: async (input, init) => {
+      capturedPath = new URL(String(input)).pathname;
+      capturedBody = JSON.parse(String(init?.body));
+      return Response.json({ acknowledged: 2 });
+    },
+  });
+  const result = await client.ackWebhookDeliveries("wh_1", ["wd_1", "wd_2"]);
+  assert.equal(result.acknowledged, 2);
+  assert.equal(capturedPath, "/api/v1/services/svc/webhook-endpoints/wh_1/deliveries/ack");
+  assert.deepEqual(capturedBody.ids, ["wd_1", "wd_2"]);
+});
+
+test("createWebhookEndpoint accepts poll mode without url", async () => {
+  let capturedBody: Record<string, unknown> = {};
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "svc",
+    serviceApiKey: "secret",
+    fetchImpl: async (_input, init) => {
+      capturedBody = JSON.parse(String(init?.body));
+      return Response.json({ endpoint: { id: "wh_1", mode: "poll" }, signingSecret: "meter_whsec_x" });
+    },
+  });
+  const created = await client.createWebhookEndpoint({ mode: "poll", events: ["*"] });
+  assert.equal(created.endpoint.mode, "poll");
+  assert.equal(capturedBody.mode, "poll");
+  assert.ok(!("url" in capturedBody));
+});
+
+test("listCustomers hits the customers list route", async () => {
+  let captured: URL | null = null;
+  const client = new MeterPublicApiClient({
+    baseUrl: "https://meter.example",
+    serviceId: "svc",
+    serviceApiKey: "secret",
+    fetchImpl: async (input) => {
+      captured = new URL(String(input));
+      return Response.json({ customers: [{ customerLocalId: "c1", balanceCredits: 5 }] });
+    },
+  });
+  const result = await client.listCustomers(50);
+  assert.equal(result.customers[0]?.customerLocalId, "c1");
+  assert.equal(captured?.pathname, "/api/v1/services/svc/customers");
+  assert.equal(captured?.searchParams.get("limit"), "50");
+});

@@ -429,6 +429,87 @@
         }
       }
     },
+    "/api/v1/services/{serviceId}/webhook-endpoints/{endpointId}/deliveries/pending": {
+      "get": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "Long-poll pending deliveries for a poll-mode webhook endpoint",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/EndpointId"
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "description": "Milliseconds to long-poll for at least one delivery before returning"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending deliveries with their event payload"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/services/{serviceId}/webhook-endpoints/{endpointId}/deliveries/ack": {
+      "post": {
+        "tags": [
+          "Provider Webhooks"
+        ],
+        "summary": "Acknowledge polled webhook deliveries so they are not redelivered",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/EndpointId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckWebhookDeliveriesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Number of deliveries acknowledged"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/gateway/v1/services/{serviceId}/mcp": {
       "post": {
         "tags": [
@@ -704,6 +785,28 @@
       }
     },
     "/api/v1/services/{serviceId}/customers": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "List service-scoped buyer customers and credit balances",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service and buyer credit accounts"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "post": {
         "tags": [
           "Customers"
@@ -2637,15 +2740,35 @@
       },
       "CreateWebhookEndpointRequest": {
         "type": "object",
-        "required": [
-          "url"
-        ],
         "properties": {
           "url": {
             "type": "string",
-            "format": "uri"
+            "format": "uri",
+            "description": "Required when mode is push (default); omitted for poll-mode endpoints"
           },
           "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "push",
+              "poll"
+            ],
+            "default": "push"
+          }
+        }
+      },
+      "AckWebhookDeliveriesRequest": {
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
             "type": "array",
             "items": {
               "type": "string"

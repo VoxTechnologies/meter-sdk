@@ -70,15 +70,20 @@ export type MeterAiModelPrice = {
   updatedAt: number;
 };
 
+export type MeterWebhookEndpointMode = "push" | "poll";
+
 export type MeterWebhookEndpoint = {
   id: string;
   serviceId: string;
   url: string;
   events: string[];
   status: "active" | "disabled";
+  mode: MeterWebhookEndpointMode;
   createdAt: number;
   updatedAt: number;
 };
+
+export type MeterPolledWebhookDelivery = MeterWebhookDelivery & { payload: unknown };
 
 export type MeterWebhookDelivery = {
   id: string;
@@ -536,8 +541,9 @@ export class MeterPublicApiClient {
   }
 
   async createWebhookEndpoint(input: {
-    url: string;
+    url?: string;
     events?: string[];
+    mode?: MeterWebhookEndpointMode;
   }): Promise<{
     service: MeterService;
     endpoint: MeterWebhookEndpoint;
@@ -553,6 +559,28 @@ export class MeterPublicApiClient {
     await this.request(
       `${this.servicePath("/webhook-endpoints")}/${encodeURIComponent(endpointId)}`,
       { method: "DELETE" }
+    );
+  }
+
+  async pollWebhookDeliveries(
+    endpointId: string,
+    options: { wait?: number; limit?: number } = {}
+  ): Promise<{ deliveries: MeterPolledWebhookDelivery[] }> {
+    return this.request(
+      this.servicePath(
+        `/webhook-endpoints/${encodeURIComponent(endpointId)}/deliveries/pending`
+      ),
+      { query: { wait: options.wait, limit: options.limit } }
+    );
+  }
+
+  async ackWebhookDeliveries(
+    endpointId: string,
+    ids: string[]
+  ): Promise<{ acknowledged: number }> {
+    return this.request(
+      this.servicePath(`/webhook-endpoints/${encodeURIComponent(endpointId)}/deliveries/ack`),
+      { method: "POST", body: { ids } }
     );
   }
 
@@ -599,6 +627,12 @@ export class MeterPublicApiClient {
     // so callers must treat apiKey as possibly-absent and persist it on creation.
   }): Promise<MeterCustomerAccountEnvelope & { apiKey?: string }> {
     return this.request(this.servicePath("/customers"), { method: "POST", body: input });
+  }
+
+  async listCustomers(
+    limit?: number
+  ): Promise<{ service: MeterService; customers: MeterCreditAccount[] }> {
+    return this.request(this.servicePath("/customers"), { query: { limit } });
   }
 
   async getCustomerCredits(customerLocalId: string): Promise<MeterCustomerAccountEnvelope> {
