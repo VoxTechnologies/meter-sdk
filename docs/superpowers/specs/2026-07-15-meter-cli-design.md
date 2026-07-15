@@ -3,6 +3,15 @@
 日付: 2026-07-15
 状態: 承認済み設計（実装計画は別文書）
 
+> [!NOTE] 実装計画作成時の改訂（2026-07-15、コード調査に基づく）
+>
+> 1. **§3 の cursor パラメータは廃止**。ack が消し込みの役割を果たすため、pending 取得に cursor は不要（at-least-once はそのまま成立）。
+> 2. **§3 の署名は CLI 側で計算**する。署名シークレットは作成時に CLI だけが受け取るので、poll API は生ペイロードを返し、CLI が転送時に既存と同一形式（`t=<unix秒>,v1=<HMAC-SHA256>`）で署名する。リトライ時のタイムスタンプも新鮮になる。
+> 3. **§4 の従量課金の実例は入力量ベースに変更**。公開済み `@meter-mcp/mcp` の `credits` リゾルバは入力ベースの動的価格を提供するが、`creditsOverride`（出力量ベース）は meter 本体の metering wrapper 専用で SDK パッケージには存在しない。
+> 4. **§2 の `meter webhooks test` から `--url` を外す**。既存のテスト配信 API は登録済み全エンドポイントへの配信で、任意 URL 指定を受け付けない。
+> 5. **login の疎通確認は `listApiKeys` で行う**（§1 では `listServices` としていたが、これは認証不要のルートで API キーの検証にならない）。
+> 6. **Public API v1 に顧客一覧の GET が無かった**ため、`GET /api/v1/services/{serviceId}/customers` をサーバー側計画に追加した（`meter customers list` の前提）。
+
 ## 目的
 
 Meter に載せる MCP サービスのプロバイダー開発者向けに、Stripe CLI 相当の開発体験を提供する。対象は「Node で MCP サーバーを書く開発者」。買い手・admin・operator の各認証面は対象外とする。
