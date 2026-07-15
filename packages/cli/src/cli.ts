@@ -5,6 +5,14 @@ import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { MeterPublicApiError } from "@meter-mcp/sdk";
 import { runLogin, runLogout, runWhoami } from "./commands/auth.js";
+import {
+  runIntegrationGet,
+  runIntegrationUpdate,
+  runPricesList,
+  runPricesSet,
+  runServicesGet,
+  runServicesUpdate,
+} from "./commands/services.js";
 import { CliError } from "./config.js";
 import { nodeIo, createContext, type CliContext } from "./context.js";
 
@@ -57,6 +65,84 @@ program
   .description("Show the authenticated service")
   .action(async () => {
     await runWhoami(contextFromProgram());
+  });
+
+const services = program.command("services").description("Manage the service profile");
+
+services
+  .command("get")
+  .description("Show the service profile")
+  .action(async () => {
+    await runServicesGet(contextFromProgram());
+  });
+
+services
+  .command("update")
+  .description("Update the service profile")
+  .option("--name <name>", "display name")
+  .option("--credit-name <name>", "name used for the credit unit")
+  .option("--brand-color <color>", "brand color")
+  .option("--support-email <email>", "support email")
+  .option("--terms-url <url>", "terms of service URL")
+  .option("--privacy-url <url>", "privacy policy URL")
+  .action(async (opts) => {
+    await runServicesUpdate(contextFromProgram(), {
+      name: opts.name,
+      creditName: opts.creditName,
+      brandColor: opts.brandColor,
+      supportEmail: opts.supportEmail,
+      termsUrl: opts.termsUrl,
+      privacyUrl: opts.privacyUrl,
+    });
+  });
+
+const integration = program.command("integration").description("Manage the gateway integration");
+
+integration
+  .command("get")
+  .description("Show the gateway integration")
+  .action(async () => {
+    await runIntegrationGet(contextFromProgram());
+  });
+
+integration
+  .command("update")
+  .description("Update the gateway integration")
+  .option("--gateway-enabled <bool>", "enable or disable the gateway", (v) => v === "true")
+  .option("--upstream-url <url>", "upstream MCP server URL")
+  .option("--upstream-auth-mode <mode>", "none | bearer | header | oauth_client_credentials")
+  .option("--upstream-auth-header <header>", "header name for header auth mode")
+  .option("--upstream-auth-secret <secret>", "upstream auth secret")
+  .option("--customer-auth-mode <mode>", "api_key | jwt")
+  .option("--auto-provision-customers <bool>", "auto-provision unknown customers", (v) => v === "true")
+  .option("--default-credits <n>", "default credits granted on auto-provision", Number)
+  .action(async (opts) => {
+    await runIntegrationUpdate(contextFromProgram(), {
+      gatewayEnabled: opts.gatewayEnabled,
+      upstreamUrl: opts.upstreamUrl,
+      upstreamAuthMode: opts.upstreamAuthMode,
+      upstreamAuthHeader: opts.upstreamAuthHeader,
+      upstreamAuthSecret: opts.upstreamAuthSecret,
+      customerAuthMode: opts.customerAuthMode,
+      autoProvisionCustomers: opts.autoProvisionCustomers,
+      defaultCredits: opts.defaultCredits,
+    });
+  });
+
+const prices = program.command("prices").description("Manage per-tool credit prices");
+
+prices
+  .command("list")
+  .description("List tool prices with their USD equivalent")
+  .action(async () => {
+    await runPricesList(contextFromProgram());
+  });
+
+prices
+  .command("set <tool> <credits>")
+  .description("Set the credit price for a tool")
+  .action(async (tool, credits) => {
+    await runPricesSet(contextFromProgram(), tool, Number(credits));
   });
 
 export function handleError(error: unknown): void {
