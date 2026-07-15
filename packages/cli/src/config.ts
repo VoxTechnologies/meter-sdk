@@ -16,6 +16,11 @@ export type MeterCliConfig = {
 
 export type ResolvedConnection = MeterProfile & { profileName: string };
 
+// Structurally equal to NodeJS.ProcessEnv, spelled out so the emitted .d.ts
+// doesn't reference the global NodeJS namespace: consumers without
+// @types/node in scope would otherwise fail to resolve it.
+export type MeterCliEnv = Record<string, string | undefined>;
+
 export class CliError extends Error {
   readonly exitCode: number;
   constructor(message: string, exitCode = 1) {
@@ -25,7 +30,7 @@ export class CliError extends Error {
   }
 }
 
-export function configPath(env: NodeJS.ProcessEnv = process.env): string {
+export function configPath(env: MeterCliEnv = process.env): string {
   const base = env.XDG_CONFIG_HOME?.trim() || join(homedir(), ".config");
   return join(base, "meter", "config.json");
 }
@@ -51,7 +56,7 @@ export function saveCliConfig(config: MeterCliConfig, path: string = configPath(
 
 export function resolveConnection(
   overrides: { profile?: string; baseUrl?: string; serviceId?: string; apiKey?: string },
-  env: NodeJS.ProcessEnv = process.env,
+  env: MeterCliEnv = process.env,
   config: MeterCliConfig = loadCliConfig()
 ): ResolvedConnection {
   const profileName = overrides.profile ?? config.activeProfile;
