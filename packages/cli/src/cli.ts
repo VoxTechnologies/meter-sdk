@@ -339,15 +339,16 @@ program
   .command("init [name]")
   .description("Scaffold an embedded-metering MCP server and register its Meter service")
   .option("--dir <path>", "target directory (defaults to the project name)")
-  .option("--base-url <url>", "Meter base URL")
   .option("--onboarding-key <key>", "onboarding API key used to create the service")
   .option("--use-profile <name>", "reuse an existing profile's service instead of creating one")
   .option("--no-install", "skip running npm install in the new project")
   .action(async (name, opts) => {
+    // --base-url is the root-level global option; it captures the flag before the
+    // subcommand does, so read it from program.opts() rather than the local opts.
     await runInit({
       name,
       dir: opts.dir,
-      baseUrl: opts.baseUrl,
+      baseUrl: program.opts().baseUrl,
       onboardingKey: opts.onboardingKey,
       useProfile: opts.useProfile,
       install: opts.install,

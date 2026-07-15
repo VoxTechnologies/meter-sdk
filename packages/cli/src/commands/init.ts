@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MeterOnboardingClient } from "@meter-mcp/sdk";
 import { CliError, loadCliConfig, saveCliConfig } from "../config.js";
@@ -18,9 +18,23 @@ type OnboardingLike = {
   }): Promise<{ service: { id: string; name: string }; apiKey: { secret: string } }>;
 };
 
+function packageRoot(): string {
+  // Walk up to the nearest package.json so this resolves the same whether it runs
+  // from src/commands (tsx) or bundled into dist/cli.js (tsup) or an installed
+  // node_modules/@meter-mcp/cli — a fixed `../..` depth breaks across those.
+  let dir = dirname(fileURLToPath(import.meta.url));
+  while (!existsSync(join(dir, "package.json"))) {
+    const parent = dirname(dir);
+    if (parent === dir) {
+      throw new CliError("could not locate the @meter-mcp/cli package root");
+    }
+    dir = parent;
+  }
+  return dir;
+}
+
 function templatesDir(): string {
-  // dist/cli.js and src/commands/init.ts are both two levels below the package root.
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "templates");
+  return join(packageRoot(), "templates");
 }
 
 export async function runInit(opts: {
@@ -115,7 +129,7 @@ export async function runInit(opts: {
 
   io.out("");
   io.out(`Done. Next steps:`);
-  io.out(`  cd ${name}`);
+  io.out(`  cd ${relative(process.cwd(), targetDir) || "."}`);
   io.out(`  npm run dev`);
   io.out(`  meter call echo --url http://localhost:8787/mcp --args '{"text":"hi"}'`);
   io.out(`  meter events tail`);
