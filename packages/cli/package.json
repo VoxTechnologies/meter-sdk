@@ -1,0 +1,66 @@
+{
+  "name": "@meter-mcp/cli",
+  "version": "0.1.1",
+  "description": "Command-line interface for Meter prepaid credits and MCP usage billing",
+  "keywords": [
+    "mcp",
+    "billing",
+    "cli",
+    "credits",
+    "usage-based-billing"
+  ],
+  "author": "Yoichiro Hara",
+  "type": "module",
+  "sideEffects": false,
+  "bin": { "meter": "./dist/cli.js" },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean && tsup src/cli.ts --format esm --sourcemap",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@meter-mcp/sdk": "^0.1.1",
+    "commander": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masterleopold/meter-sdk.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/masterleopold/meter-sdk/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/masterleopold/meter-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "MIT"
+}

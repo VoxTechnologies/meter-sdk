@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const manifests = ["sdk", "mcp", "adapters"].map((name) =>
+const manifests = ["sdk", "mcp", "adapters", "cli"].map((name) =>
   JSON.parse(readFileSync(path.join(root, "packages", name, "package.json"), "utf8"))
 );
 const versions = new Set(manifests.map((manifest) => manifest.version));

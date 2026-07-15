@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const workspaces = ["./packages/sdk", "./packages/mcp", "./packages/adapters"];
+const workspaces = ["./packages/sdk", "./packages/mcp", "./packages/adapters", "./packages/cli"];
 const temp = mkdtempSync(path.join(tmpdir(), "meter-sdk-pack-"));
 
 function run(command, args, options = {}) {
@@ -54,7 +54,8 @@ try {
     `import { MeterPublicApiClient, verifyMeterWebhookSignature } from "@meter-mcp/sdk";\n` +
       `import { paidTool } from "@meter-mcp/mcp";\n` +
       `import { createBuyerPortalHandler } from "@meter-mcp/adapters";\n` +
-      `if (![MeterPublicApiClient, verifyMeterWebhookSignature, paidTool, createBuyerPortalHandler].every(Boolean)) process.exit(1);\n`
+      `import { cliName } from "@meter-mcp/cli";\n` +
+      `if (![MeterPublicApiClient, verifyMeterWebhookSignature, paidTool, createBuyerPortalHandler, cliName].every(Boolean)) process.exit(1);\n`
   );
   run(process.execPath, ["consumer.mjs"], { cwd: consumer });
   writeFileSync(
@@ -62,7 +63,8 @@ try {
     `const sdk = require("@meter-mcp/sdk");\n` +
       `const mcp = require("@meter-mcp/mcp");\n` +
       `const adapters = require("@meter-mcp/adapters");\n` +
-      `if (![sdk.MeterPublicApiClient, sdk.verifyMeterWebhookSignature, mcp.paidTool, adapters.createBuyerPortalHandler].every(Boolean)) process.exit(1);\n`
+      `const cli = require("@meter-mcp/cli");\n` +
+      `if (![sdk.MeterPublicApiClient, sdk.verifyMeterWebhookSignature, mcp.paidTool, adapters.createBuyerPortalHandler, cli.cliName].every(Boolean)) process.exit(1);\n`
   );
   run(process.execPath, ["consumer.cjs"], { cwd: consumer });
   writeFileSync(
@@ -70,17 +72,19 @@ try {
     `import { MeterPublicApiClient, type MeterUsageReport } from "@meter-mcp/sdk";\n` +
       `import { paidTool } from "@meter-mcp/mcp";\n` +
       `import { createBuyerPortalHandler } from "@meter-mcp/adapters";\n` +
+      `import { cliName } from "@meter-mcp/cli";\n` +
       `const meter = new MeterPublicApiClient({ baseUrl: "https://meter.example", serviceId: "service" });\n` +
       `const report: MeterUsageReport | undefined = undefined;\n` +
-      `void [meter, report, paidTool, createBuyerPortalHandler];\n`
+      `void [meter, report, paidTool, createBuyerPortalHandler, cliName];\n`
   );
   writeFileSync(
     path.join(consumer, "consumer.cts"),
     `import sdk = require("@meter-mcp/sdk");\n` +
       `import mcp = require("@meter-mcp/mcp");\n` +
       `import adapters = require("@meter-mcp/adapters");\n` +
+      `import cli = require("@meter-mcp/cli");\n` +
       `const meter = new sdk.MeterPublicApiClient({ baseUrl: "https://meter.example", serviceId: "service" });\n` +
-      `void [meter, mcp.paidTool, adapters.createBuyerPortalHandler];\n`
+      `void [meter, mcp.paidTool, adapters.createBuyerPortalHandler, cli.cliName];\n`
   );
   writeFileSync(
     path.join(consumer, "tsconfig.json"),
