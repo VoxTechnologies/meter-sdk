@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
@@ -11,9 +12,18 @@ export const program = new Command("meter")
   .version(cliVersion);
 
 // Only parse when executed as a bin — importing this module (tests) must not parse argv.
-const isMain =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+// argv[1] is resolved through realpathSync because npm's bin shim (npx / npm i -g)
+// invokes this file through a symlink, while import.meta.url is already realpath-resolved.
+function mainScriptHref(): string | undefined {
+  const argv1 = process.argv[1];
+  if (argv1 === undefined) return undefined;
+  try {
+    return pathToFileURL(realpathSync(argv1)).href;
+  } catch {
+    return pathToFileURL(argv1).href;
+  }
+}
+const isMain = import.meta.url === mainScriptHref();
 if (isMain) {
   program.parseAsync(process.argv).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
