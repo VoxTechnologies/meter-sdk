@@ -26,6 +26,7 @@ import {
 } from "./commands/customers.js";
 import { runEventsTail, runUsage } from "./commands/usage.js";
 import {
+  runListen,
   runWebhooksCreate,
   runWebhooksDelete,
   runWebhooksList,
@@ -298,6 +299,21 @@ webhooks
   .description("Send a test event to all registered endpoints")
   .action(async () => {
     await runWebhooksTest(contextFromProgram());
+  });
+
+program
+  .command("listen")
+  .description("Stream provider webhooks to your terminal or a local URL")
+  .option("--forward-to <url>", "POST received events to this local URL")
+  .option("--events <list>", "comma-separated event filter", "*")
+  .action(async (options: { forwardTo?: string; events: string }) => {
+    const controller = new AbortController();
+    process.once("SIGINT", () => controller.abort());
+    await runListen(contextFromProgram(), {
+      forwardTo: options.forwardTo,
+      events: options.events.split(",").map((event) => event.trim()),
+      signal: controller.signal,
+    });
   });
 
 export function handleError(error: unknown): void {
