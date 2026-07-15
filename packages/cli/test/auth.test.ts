@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadCliConfig } from "../src/config.js";
+import { loadCliConfig, saveCliConfig } from "../src/config.js";
 import { runLogin, runLogout } from "../src/commands/auth.js";
 
 function fakeIo(answers: string[]) {
@@ -43,6 +43,39 @@ test("login does not save when verification fails", async () => {
     )
   );
   assert.deepEqual(loadCliConfig(configFile).profiles, {});
+});
+
+test("re-login preserves a cached buyer key for the same base URL and service", async () => {
+  const configFile = join(mkdtempSync(join(tmpdir(), "meter-cli-")), "config.json");
+  const verify = async () => Response.json({ service: { id: "svc", name: "Svc" }, apiKeys: [] });
+  await runLogin(
+    { profile: "default", baseUrl: "https://meter.example", serviceId: "svc", apiKey: "sk_test", configPath: configFile },
+    fakeIo([]).io,
+    verify
+  );
+
+  // Simulate the one-time buyer key that `meter call` caches after first use.
+  const cached = loadCliConfig(configFile);
+  cached.profiles.default!.testCustomerApiKey = "cust_sk_test";
+  saveCliConfig(cached, configFile);
+
+  await runLogin(
+    { profile: "default", baseUrl: "https://meter.example", serviceId: "svc", apiKey: "sk_rotated", configPath: configFile },
+    fakeIo([]).io,
+    verify
+  );
+  const preserved = loadCliConfig(configFile);
+  assert.equal(preserved.profiles.default?.apiKey, "sk_rotated");
+  assert.equal(preserved.profiles.default?.testCustomerApiKey, "cust_sk_test");
+
+  // A different service makes the cached buyer key stale — it must be dropped.
+  await runLogin(
+    { profile: "default", baseUrl: "https://meter.example", serviceId: "other-svc", apiKey: "sk_other", configPath: configFile },
+    fakeIo([]).io,
+    async () => Response.json({ service: { id: "other-svc", name: "Other" }, apiKeys: [] })
+  );
+  const dropped = loadCliConfig(configFile);
+  assert.equal(dropped.profiles.default?.testCustomerApiKey, undefined);
 });
 
 test("logout removes the profile", async () => {

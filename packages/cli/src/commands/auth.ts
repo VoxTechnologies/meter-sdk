@@ -27,7 +27,20 @@ export async function runLogin(
   const verified = await client.listApiKeys();
 
   const config = loadCliConfig(opts.configPath);
-  config.profiles[opts.profile] = { baseUrl, serviceId, apiKey };
+  // Preserve a previously cached one-time buyer key across a re-login, but only when
+  // the same deployment+service is being re-authenticated — a different baseUrl or
+  // serviceId makes the cached key stale and wrong for the new target.
+  const previous = config.profiles[opts.profile];
+  const keepTestKey =
+    previous && previous.baseUrl === baseUrl && previous.serviceId === serviceId
+      ? previous.testCustomerApiKey
+      : undefined;
+  config.profiles[opts.profile] = {
+    baseUrl,
+    serviceId,
+    apiKey,
+    ...(keepTestKey ? { testCustomerApiKey: keepTestKey } : {}),
+  };
   config.activeProfile = opts.profile;
   saveCliConfig(config, opts.configPath);
   io.out(

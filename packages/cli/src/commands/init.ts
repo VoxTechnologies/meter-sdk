@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync
 import { spawnSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MeterOnboardingClient } from "@meter-mcp/sdk";
+import { MeterOnboardingClient, MeterPublicApiClient } from "@meter-mcp/sdk";
 import { CliError, loadCliConfig, saveCliConfig } from "../config.js";
 import type { CliIo } from "../context.js";
 
@@ -16,6 +16,14 @@ type OnboardingLike = {
     name: string;
     integration?: { toolPrices: Record<string, number> };
   }): Promise<{ service: { id: string; name: string }; apiKey: { secret: string } }>;
+};
+
+type PublicClientLike = {
+  upsertCustomer(input: {
+    customerLocalId: string;
+    name?: string;
+    initialCredits?: number;
+  }): Promise<{ apiKey?: string }>;
 };
 
 function packageRoot(): string {
@@ -47,6 +55,7 @@ export async function runInit(opts: {
   configPath?: string;
   io: CliIo;
   onboarding?: OnboardingLike;
+  publicClient?: PublicClientLike;
   execInstall?: (cwd: string) => void;
 }): Promise<void> {
   const io = opts.io;
@@ -91,6 +100,30 @@ export async function runInit(opts: {
     );
   }
 
+  // Fund a test buyer so the printed "meter call echo" next-step actually decrements
+  // credits instead of failing payment_required. The buyer API key is a one-time
+  // secret returned only on first creation; cache it on the profile below.
+  let testCustomerApiKey: string | undefined;
+  const publicClient =
+    opts.publicClient ??
+    new MeterPublicApiClient({ baseUrl, serviceId, serviceApiKey: apiKey, timeoutMs: 30_000 });
+  try {
+    const customer = await publicClient.upsertCustomer({
+      customerLocalId: "cli-test",
+      name: "cli-test",
+      initialCredits: 1000,
+    });
+    testCustomerApiKey = customer.apiKey;
+    io.out(`Created test customer "cli-test" with 1000 credits.`);
+  } catch (error) {
+    // A funded test customer is a convenience, not a prerequisite: an unreachable
+    // server here must not abort a scaffold that has otherwise succeeded.
+    const message = error instanceof Error ? error.message : String(error);
+    io.err(
+      `warning: could not create test customer: ${message}; run "meter customers grant cli-test 1000" later`
+    );
+  }
+
   // Scaffold: copy TS files verbatim, expand *.tmpl tokens.
   mkdirSync(join(targetDir, "src"), { recursive: true });
   const templates = templatesDir();
@@ -113,7 +146,12 @@ export async function runInit(opts: {
   render("README.md.tmpl", "README.md");
 
   // Persist the service credentials as a profile named after the project.
-  config.profiles[name] = { baseUrl, serviceId, apiKey };
+  config.profiles[name] = {
+    baseUrl,
+    serviceId,
+    apiKey,
+    ...(testCustomerApiKey ? { testCustomerApiKey } : {}),
+  };
   config.activeProfile = name;
   saveCliConfig(config, opts.configPath);
 

@@ -15,6 +15,12 @@ export async function runCall(
 ): Promise<void> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const customer = opts.customer ?? "cli-test";
+  if (
+    opts.grantCredits !== undefined &&
+    !(Number.isSafeInteger(opts.grantCredits) && opts.grantCredits > 0)
+  ) {
+    throw new CliError("--grant must be a positive integer");
+  }
   let toolArgs: Record<string, unknown>;
   try {
     toolArgs = JSON.parse(opts.args ?? "{}") as Record<string, unknown>;

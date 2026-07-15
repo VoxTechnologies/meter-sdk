@@ -15,6 +15,7 @@ test("init scaffolds the template, registers the service, and saves the profile"
   const configFile = join(workDir, "config.json");
   const projectDir = join(workDir, "my-books");
   const created: unknown[] = [];
+  const upserts: unknown[] = [];
   const io = { out: () => {}, err: () => {}, prompt: async () => "" };
 
   await runInit({
@@ -31,6 +32,12 @@ test("init scaffolds the template, registers the service, and saves the profile"
         return { service: { id: "my-books", name: "my-books" }, apiKey: { secret: "sk_new" } };
       },
     },
+    publicClient: {
+      upsertCustomer: async (input) => {
+        upserts.push(input);
+        return { apiKey: "cust_sk_test" };
+      },
+    },
   });
 
   assert.equal((created[0] as { slug: string }).slug, "my-books");
@@ -38,6 +45,8 @@ test("init scaffolds the template, registers the service, and saves the profile"
     echo: 1,
     summarize: 5,
   });
+  assert.equal((upserts[0] as { customerLocalId: string }).customerLocalId, "cli-test");
+  assert.equal((upserts[0] as { initialCredits: number }).initialCredits, 1000);
   assert.ok(existsSync(join(projectDir, "src", "server.ts")));
   const env = readFileSync(join(projectDir, ".env"), "utf8");
   assert.match(env, /METER_API_URL=https:\/\/meter\.example/);
@@ -46,6 +55,7 @@ test("init scaffolds the template, registers the service, and saves the profile"
   assert.equal(pkg.name, "my-books");
   const config = loadCliConfig(configFile);
   assert.equal(config.profiles["my-books"]?.apiKey, "sk_new");
+  assert.equal(config.profiles["my-books"]?.testCustomerApiKey, "cust_sk_test");
   assert.equal(config.activeProfile, "my-books");
 });
 
@@ -95,6 +105,18 @@ test("init resolves templates from the BUILT bundle end-to-end", async (t) => {
       );
       return;
     }
+    if (req.method === "POST" && req.url === "/api/v1/services/distproj/customers") {
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          service: { id: "distproj", name: "distproj", creditName: "credits" },
+          customer: { localId: "cli-test", name: "cli-test" },
+          account: { balanceCredits: 1000 },
+          apiKey: "cust_sk_dist",
+        })
+      );
+      return;
+    }
     res.statusCode = 404;
     res.end();
   });
@@ -134,6 +156,8 @@ test("init resolves templates from the BUILT bundle end-to-end", async (t) => {
     assert.match(env, new RegExp(`METER_API_URL=http://127\\.0\\.0\\.1:${port}`));
     assert.match(env, /METER_SERVICE_ID=distproj/);
     assert.match(env, /METER_SERVICE_API_KEY=sk_dist/);
+    const savedConfig = loadCliConfig(join(xdg, "meter", "config.json"));
+    assert.equal(savedConfig.profiles.distproj?.testCustomerApiKey, "cust_sk_dist");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

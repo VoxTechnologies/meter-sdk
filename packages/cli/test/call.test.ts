@@ -42,6 +42,18 @@ test("direct mode parses SSE responses", async () => {
   assert.match(lines.join("\n"), /sse-hi/);
 });
 
+test("rejects a non-integer --grant at the runner boundary", async () => {
+  const { ctx } = stubContext(() => envelope);
+  await assert.rejects(
+    runCall(ctx, { tool: "echo", grantCredits: Number("abc") }),
+    /--grant must be a positive integer/
+  );
+  await assert.rejects(
+    runCall(ctx, { tool: "echo", grantCredits: 0 }),
+    /--grant must be a positive integer/
+  );
+});
+
 test("gateway mode refuses when the gateway is disabled", async () => {
   const { ctx } = stubContext((call) =>
     call.path.endsWith("/integration")
