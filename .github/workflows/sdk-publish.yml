@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Require public source for npm provenance
         env:
@@ -28,7 +28,7 @@ jobs:
 
   publish:
     needs: preflight
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: npm
     steps:
       - uses: actions/checkout@v7
