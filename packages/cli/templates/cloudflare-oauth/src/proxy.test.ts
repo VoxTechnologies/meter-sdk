@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Config } from './config'
+import type { BuyerProps } from './backend'
 import { mintShortLivedToken, provisionBuyer } from './backend'
 import { proxyMcpRequest } from './mcp'
 import { refreshBuyerProps } from './refresh'
 import { renderConsentPage, renderProvisionedPage } from './consent'
 
-const CFG: Config = {
+const PROPS: BuyerProps = {
+  customerLocalId: 'buyer-1',
+  buyerToken: 'tok',
   backendBaseUrl: 'https://svc.test',
   mcpPath: '/api/mcp/fto',
   buyerHeader: 'x-svc-buyer-token',
-  serviceName: 'Demo FTO',
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -17,24 +18,26 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('provisionBuyer', () => {
-  it('mints a fresh buyer and returns its props', async () => {
+  it('mints a fresh buyer identity', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ buyerToken: 'fresh' }, 201))
-    const props = await provisionBuyer(CFG, { fetchImpl })
-    expect(props?.buyerToken).toBe('fresh')
-    expect(props?.customerLocalId).toMatch(/^oauth-/)
+    const id = await provisionBuyer({ backendBaseUrl: 'https://svc.test', fetchImpl })
+    expect(id?.buyerToken).toBe('fresh')
+    expect(id?.customerLocalId).toMatch(/^oauth-/)
     expect(fetchImpl.mock.calls[0][0]).toBe('https://svc.test/api/meter/customers')
   })
 
   it('returns null on failure', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: 'x' }, 502))
-    expect(await provisionBuyer(CFG, { fetchImpl })).toBeNull()
+    expect(await provisionBuyer({ backendBaseUrl: 'https://svc.test', fetchImpl })).toBeNull()
   })
 })
 
 describe('mintShortLivedToken', () => {
   it('exchanges the token against the configured backend + header', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ buyerToken: 'short', expiresIn: 3600 }))
-    const fresh = await mintShortLivedToken(CFG, {
+    const fresh = await mintShortLivedToken({
+      backendBaseUrl: 'https://svc.test',
+      buyerHeader: 'x-svc-buyer-token',
       customerLocalId: 'buyer-1',
       buyerToken: 'long',
       ttlSeconds: 3600,
@@ -48,42 +51,42 @@ describe('mintShortLivedToken', () => {
 
   it('returns null when the token is invalid', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: 'x' }, 401))
-    expect(await mintShortLivedToken(CFG, { customerLocalId: 'b', buyerToken: 'x', fetchImpl })).toBeNull()
+    expect(
+      await mintShortLivedToken({
+        backendBaseUrl: 'https://svc.test',
+        buyerHeader: 'x-svc-buyer-token',
+        customerLocalId: 'b',
+        buyerToken: 'x',
+        fetchImpl,
+      }),
+    ).toBeNull()
   })
 })
 
 describe('refreshBuyerProps', () => {
-  it('re-mints and returns newProps', async () => {
+  it('re-mints from props alone (no env / global) and preserves the config', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ buyerToken: 'fresh', expiresIn: 3600 }))
-    const result = await refreshBuyerProps({
-      cfg: CFG,
-      props: { customerLocalId: 'buyer-1', buyerToken: 'cur' },
-      fetchImpl,
-    })
-    expect(result).toEqual({ newProps: { customerLocalId: 'buyer-1', buyerToken: 'fresh' } })
+    const result = await refreshBuyerProps({ props: PROPS, fetchImpl })
+    expect(result).toEqual({ newProps: { ...PROPS, buyerToken: 'fresh' } })
+    // Uses the backend + header carried in props — works on any (even cold) isolate.
+    expect(fetchImpl.mock.calls[0][0]).toBe('https://svc.test/api/meter/customers/buyer-1/token')
   })
 
   it('keeps props (undefined) when re-mint fails', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: 'x' }, 502))
-    expect(
-      await refreshBuyerProps({ cfg: CFG, props: { customerLocalId: 'b', buyerToken: 'c' }, fetchImpl }),
-    ).toBeUndefined()
+    expect(await refreshBuyerProps({ props: PROPS, fetchImpl })).toBeUndefined()
   })
 })
 
 describe('proxyMcpRequest', () => {
-  it('forwards JSON-RPC to the configured MCP path with injected buyer headers', async () => {
+  it('forwards JSON-RPC to the props MCP path with injected buyer headers', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 2, result: { tools: [] } }))
     const req = new Request('https://worker.test/mcp', {
       method: 'POST',
       headers: { accept: 'application/json', 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
     })
-    const res = await proxyMcpRequest(req, {
-      cfg: CFG,
-      props: { customerLocalId: 'buyer-1', buyerToken: 'tok' },
-      fetchImpl,
-    })
+    const res = await proxyMcpRequest(req, { props: PROPS, fetchImpl })
     expect(res.status).toBe(200)
     const [url, init] = fetchImpl.mock.calls[0]
     expect(url).toBe('https://svc.test/api/mcp/fto')
@@ -95,7 +98,7 @@ describe('proxyMcpRequest', () => {
   it('propagates a non-2xx upstream status', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ error: 'unauthorized' }, 401))
     const req = new Request('https://worker.test/mcp', { method: 'POST', body: '{}' })
-    const res = await proxyMcpRequest(req, { cfg: CFG, props: { customerLocalId: 'b', buyerToken: 't' }, fetchImpl })
+    const res = await proxyMcpRequest(req, { props: PROPS, fetchImpl })
     expect(res.status).toBe(401)
   })
 })

@@ -12,14 +12,18 @@ const ACCESS_TOKEN_TTL_SECONDS = SHORT_TOKEN_TTL_SECONDS / 2
 
 type Env = Omit<BaseEnv, 'OAUTH_PROVIDER'> & { OAUTH_PROVIDER: OAuthHelpers }
 
-// tokenExchangeCallback runs inside the OAuth library and is not handed `env`,
-// and Workers vars are not on globalThis. Capture the config from every request
-// that does receive env, so a refresh landing on a cold isolate still resolves.
-let capturedConfig: Config | undefined
-function rememberConfig(env: Env): Config {
-  const cfg = configFromEnv(env)
-  capturedConfig = cfg
-  return cfg
+// Everything the refresh callback and the proxy need travels in the grant
+// props (stamped at consent time), so neither depends on `env` — which the
+// OAuth library does not pass to tokenExchangeCallback, and which a cold
+// isolate serving a /token refresh first would not have populated into a global.
+function propsFromConfig(cfg: Config, identity: { customerLocalId: string; buyerToken: string }): BuyerProps {
+  return {
+    customerLocalId: identity.customerLocalId,
+    buyerToken: identity.buyerToken,
+    backendBaseUrl: cfg.backendBaseUrl,
+    mcpPath: cfg.mcpPath,
+    buyerHeader: cfg.buyerHeader,
+  }
 }
 
 function html(body: string, status = 200): Response {
@@ -72,7 +76,7 @@ async function handleAuthorizePost(request: Request, env: Env, cfg: Config): Pro
   const mode = String(form.get('mode') ?? 'new')
 
   if (mode === 'new') {
-    const provisioned = await provisionBuyer(cfg)
+    const provisioned = await provisionBuyer({ backendBaseUrl: cfg.backendBaseUrl })
     if (!provisioned) return consent('buyer_provisioning_failed', 502)
     // Surface the credentials before completing, so the balance is recoverable.
     return html(
@@ -94,10 +98,16 @@ async function handleAuthorizePost(request: Request, env: Env, cfg: Config): Pro
   const buyerToken = String(form.get('buyerToken') ?? '').trim()
   const shortToken =
     customerLocalId !== '' && buyerToken !== ''
-      ? await mintShortLivedToken(cfg, { customerLocalId, buyerToken, ttlSeconds: SHORT_TOKEN_TTL_SECONDS })
+      ? await mintShortLivedToken({
+          backendBaseUrl: cfg.backendBaseUrl,
+          buyerHeader: cfg.buyerHeader,
+          customerLocalId,
+          buyerToken,
+          ttlSeconds: SHORT_TOKEN_TTL_SECONDS,
+        })
       : null
   if (!shortToken) return consent('invalid_buyer_token', 401)
-  const props: BuyerProps = { customerLocalId, buyerToken: shortToken }
+  const props = propsFromConfig(cfg, { customerLocalId, buyerToken: shortToken })
 
   const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
     request: oauthReq,
@@ -111,7 +121,7 @@ async function handleAuthorizePost(request: Request, env: Env, cfg: Config): Pro
 
 const defaultHandler = {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const cfg = rememberConfig(env)
+    const cfg = configFromEnv(env)
     const url = new URL(request.url)
     if (url.pathname === '/authorize' && request.method === 'GET') return handleAuthorizeGet(request, env, cfg)
     if (url.pathname === '/authorize' && request.method === 'POST') return handleAuthorizePost(request, env, cfg)
@@ -125,8 +135,7 @@ const defaultHandler = {
 }
 
 const apiHandler = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext & { props: BuyerProps }): Promise<Response> {
-    const cfg = rememberConfig(env)
+  async fetch(request: Request, _env: Env, ctx: ExecutionContext & { props: BuyerProps }): Promise<Response> {
     if (new URL(request.url).pathname !== '/mcp') {
       return Response.json({ jsonrpc: '2.0', error: { code: -32000, message: 'Use /mcp' }, id: null }, { status: 404 })
     }
@@ -140,7 +149,8 @@ const apiHandler = {
         { status: 405, headers: { 'content-type': 'application/json', allow: 'POST' } },
       )
     }
-    return proxyMcpRequest(request, { cfg, props: ctx.props })
+    // The grant props carry the backend config, so the proxy needs no env.
+    return proxyMcpRequest(request, { props: ctx.props })
   },
 }
 
@@ -153,10 +163,11 @@ export default new OAuthProvider({
   clientRegistrationEndpoint: '/register',
   accessTokenTTL: ACCESS_TOKEN_TTL_SECONDS,
   // On every token exchange (initial code + each refresh) re-mint the buyer
-  // token from the one currently in the grant. A revoked grant never refreshes,
-  // so its short buyer token expires and spend stops.
+  // token from the one currently in the grant. The grant props carry the
+  // backend config, so this always re-mints — even on a cold isolate — and a
+  // revoked grant simply stops refreshing, so its short buyer token expires and
+  // spend stops.
   tokenExchangeCallback: async (options: { props: BuyerProps }) => {
-    if (!capturedConfig) return undefined
-    return refreshBuyerProps({ cfg: capturedConfig, props: options.props })
+    return refreshBuyerProps({ props: options.props })
   },
 })
