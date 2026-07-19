@@ -46,9 +46,29 @@ jobs:
         run: node scripts/verify-sdk-release.mjs
       - name: Verify source, tests, and packed consumers
         run: npm run verify
+      # Publish every package in the fixed-version group, skipping any version
+      # already on the registry so a re-run after a partial failure is safe.
       - name: Publish SDK
-        run: npm publish --workspace @meter-mcp/sdk
+        run: |
+          v=$(node -p "require('./packages/sdk/package.json').version")
+          npm view "@meter-mcp/sdk@$v" version >/dev/null 2>&1 \
+            && echo "@meter-mcp/sdk@$v already published; skipping" \
+            || npm publish --workspace @meter-mcp/sdk
       - name: Publish MCP wrapper
-        run: npm publish --workspace @meter-mcp/mcp
+        run: |
+          v=$(node -p "require('./packages/mcp/package.json').version")
+          npm view "@meter-mcp/mcp@$v" version >/dev/null 2>&1 \
+            && echo "@meter-mcp/mcp@$v already published; skipping" \
+            || npm publish --workspace @meter-mcp/mcp
       - name: Publish framework adapters
-        run: npm publish --workspace @meter-mcp/adapters
+        run: |
+          v=$(node -p "require('./packages/adapters/package.json').version")
+          npm view "@meter-mcp/adapters@$v" version >/dev/null 2>&1 \
+            && echo "@meter-mcp/adapters@$v already published; skipping" \
+            || npm publish --workspace @meter-mcp/adapters
+      - name: Publish CLI
+        run: |
+          v=$(node -p "require('./packages/cli/package.json').version")
+          npm view "@meter-mcp/cli@$v" version >/dev/null 2>&1 \
+            && echo "@meter-mcp/cli@$v already published; skipping" \
+            || npm publish --workspace @meter-mcp/cli
