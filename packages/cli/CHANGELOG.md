@@ -1,5 +1,21 @@
 # @meter-mcp/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 3b7c7a1: `meter oauth-proxy` scaffolds a Cloudflare Workers OAuth 2.1 proxy that fronts
+  an existing Meter-backed MCP endpoint: a pass-through that injects the buyer
+  identity from the OAuth grant (re-implementing no tools), with account-less
+  buyer provisioning on the consent page and short-lived tokens re-minted on
+  every token exchange so revoking the grant halts spend within the hour. The
+  target service is configured via Wrangler vars (backend URL, MCP path,
+  buyer-token header, service name).
+
+### Patch Changes
+
+- @meter-mcp/sdk@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
