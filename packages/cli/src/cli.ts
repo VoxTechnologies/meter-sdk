@@ -346,6 +346,7 @@ program
   .option("--dir <path>", "target directory (defaults to the project name)")
   .option("--onboarding-key <key>", "onboarding API key used to create the service")
   .option("--use-profile <name>", "reuse an existing profile's service instead of creating one")
+  .option("--target <runtime>", "server runtime to scaffold: node or cloudflare", "node")
   .option("--no-install", "skip running npm install in the new project")
   .action(async (name, opts) => {
     // --base-url is the root-level global option; it captures the flag before the
@@ -356,6 +357,7 @@ program
       baseUrl: program.opts().baseUrl,
       onboardingKey: opts.onboardingKey,
       useProfile: opts.useProfile,
+      target: opts.target,
       install: opts.install,
       io: nodeIo(),
     });

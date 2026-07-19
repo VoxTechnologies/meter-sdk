@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "__PROJECT_NAME__",
+  "main": "src/server.ts",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "METER_API_URL": "__METER_BASE_URL__",
+    "METER_SERVICE_ID": "__SERVICE_ID__"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -28,6 +28,18 @@ meter events tail
 a config profile named after the project (see [Configuration](#configuration)
 below). The commands above are also printed at the end of `meter init`.
 
+By default it scaffolds a Node.js server. Pass `--target cloudflare` to scaffold
+a Cloudflare Workers version instead — a `fetch` handler over Web-standard
+Streamable HTTP with a `wrangler.jsonc`, the service API key kept in `.dev.vars`
+locally and `wrangler secret put` for production:
+
+```bash
+meter init my-server --target cloudflare
+cd my-server
+npm run dev                                  # wrangler dev on :8787
+npx wrangler secret put METER_SERVICE_API_KEY && npm run deploy
+```
+
 ## Configuration
 
 Credentials are stored per-profile in a config file at:

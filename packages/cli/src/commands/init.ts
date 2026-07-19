@@ -51,6 +51,7 @@ export async function runInit(opts: {
   baseUrl?: string;
   onboardingKey?: string;
   useProfile?: string;
+  target?: string;
   install?: boolean;
   configPath?: string;
   io: CliIo;
@@ -59,6 +60,10 @@ export async function runInit(opts: {
   execInstall?: (cwd: string) => void;
 }): Promise<void> {
   const io = opts.io;
+  const target = opts.target ?? "node";
+  if (target !== "node" && target !== "cloudflare") {
+    throw new CliError(`unknown target "${target}" (expected "node" or "cloudflare")`);
+  }
   const name = (opts.name ?? (await io.prompt("Project name: "))).trim();
   if (!/^[a-z0-9][a-z0-9_-]{1,62}$/.test(name)) {
     throw new CliError("project name must be lowercase alphanumeric with - or _ (2-63 chars)");
@@ -124,11 +129,14 @@ export async function runInit(opts: {
     );
   }
 
-  // Scaffold: copy TS files verbatim, expand *.tmpl tokens.
+  // Scaffold: copy TS files verbatim, expand *.tmpl tokens. Target-specific
+  // files (server, package.json, README, tsconfig, gitignore) come from the
+  // target's own directory; shared files (env docs) stay at the templates root.
   mkdirSync(join(targetDir, "src"), { recursive: true });
   const templates = templatesDir();
-  cpSync(join(templates, "src", "server.ts"), join(targetDir, "src", "server.ts"));
-  cpSync(join(templates, "tsconfig.json"), join(targetDir, "tsconfig.json"));
+  const base = target === "cloudflare" ? join(templates, "cloudflare") : templates;
+  cpSync(join(base, "src", "server.ts"), join(targetDir, "src", "server.ts"));
+  cpSync(join(base, "tsconfig.json"), join(targetDir, "tsconfig.json"));
   const tokens: Record<string, string> = {
     __PROJECT_NAME__: name,
     __METER_BASE_URL__: baseUrl,
@@ -137,13 +145,20 @@ export async function runInit(opts: {
   };
   const expand = (template: string) =>
     Object.entries(tokens).reduce((text, [token, value]) => text.replaceAll(token, value), template);
-  const render = (from: string, to: string) =>
-    writeFileSync(join(targetDir, to), expand(readFileSync(join(templates, from), "utf8")));
-  render("package.json.tmpl", "package.json");
-  render("env.tmpl", ".env");
-  render("env.example.tmpl", ".env.example");
-  render("gitignore.tmpl", ".gitignore");
-  render("README.md.tmpl", "README.md");
+  const render = (fromDir: string, from: string, to: string) =>
+    writeFileSync(join(targetDir, to), expand(readFileSync(join(fromDir, from), "utf8")));
+  render(base, "package.json.tmpl", "package.json");
+  render(base, "gitignore.tmpl", ".gitignore");
+  render(base, "README.md.tmpl", "README.md");
+  render(templates, "env.example.tmpl", ".env.example");
+  if (target === "cloudflare") {
+    // wrangler dev reads the secret from .dev.vars; the non-secret vars live in
+    // wrangler.jsonc, so no .env with `node --env-file` is scaffolded here.
+    render(base, "wrangler.jsonc.tmpl", "wrangler.jsonc");
+    render(base, "dev-vars.tmpl", ".dev.vars");
+  } else {
+    render(templates, "env.tmpl", ".env");
+  }
 
   // Persist the service credentials as a profile named after the project.
   config.profiles[name] = {
@@ -171,4 +186,10 @@ export async function runInit(opts: {
   io.out(`  npm run dev`);
   io.out(`  meter call echo --url http://localhost:8787/mcp --args '{"text":"hi"}'`);
   io.out(`  meter events tail`);
+  if (target === "cloudflare") {
+    io.out("");
+    io.out(`Deploy:`);
+    io.out(`  npx wrangler secret put METER_SERVICE_API_KEY   # paste the key from .dev.vars`);
+    io.out(`  npm run deploy`);
+  }
 }

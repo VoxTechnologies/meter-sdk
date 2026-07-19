@@ -1,0 +1,54 @@
+# __PROJECT_NAME__
+
+An MCP server with embedded Meter billing, running on **Cloudflare Workers**.
+Each tool call reserves prepaid credits, runs, then commits the actual price; an
+insufficient balance returns `payment_required` instead of running for free.
+
+## Run it locally
+
+```bash
+npm run dev
+```
+
+`wrangler dev` serves on `http://localhost:8787/mcp` and reads the service API
+key from `.dev.vars`. In another terminal, call a tool through the Meter CLI
+(the caller identifies the buyer with an `x-customer-id` header, which
+`meter call` sends as `--customer`):
+
+```bash
+meter call echo --url http://localhost:8787/mcp --args '{"text":"hi"}'
+```
+
+Then watch the usage events land in your Meter service:
+
+```bash
+meter events tail
+```
+
+## Deploy
+
+The service API key is a secret, so it lives in `.dev.vars` (gitignored) for
+local dev and in Wrangler's secret store for production — never in
+`wrangler.jsonc`:
+
+```bash
+npx wrangler secret put METER_SERVICE_API_KEY   # paste the key from .dev.vars
+npm run deploy
+```
+
+`wrangler.jsonc` already carries the non-secret `METER_API_URL` and
+`METER_SERVICE_ID` as plain vars.
+
+## Switching to the Meter gateway
+
+The commands above call this server directly. To put Meter's hosted gateway in
+front of it — so credit checks, auto-recharge, and customer auth run at the
+edge instead of in this Worker — deploy it, then point your service's
+integration at its URL:
+
+```bash
+meter integration update --upstream-url <deployed URL> --gateway-enabled true
+```
+
+Callers then hit the gateway URL, and Meter forwards paid, authenticated
+requests upstream to this Worker.

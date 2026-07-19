@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM"],
+    "types": [],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "cloudflare/src/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
