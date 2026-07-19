@@ -1,5 +1,18 @@
 # @meter-mcp/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- 2cdd3f8: `meter init --target cloudflare` scaffolds a Cloudflare Workers MCP server: a
+  `fetch` handler over Web-standard Streamable HTTP with `wrangler.jsonc`, the
+  service API key kept in `.dev.vars` locally and `wrangler secret` for
+  production. The default target stays Node.js.
+
+### Patch Changes
+
+- @meter-mcp/sdk@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

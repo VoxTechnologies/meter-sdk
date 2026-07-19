@@ -1,6 +1,6 @@
 {
   "name": "@meter-mcp/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Command-line interface for Meter prepaid credits and MCP usage billing",
   "keywords": [
     "mcp",
@@ -45,7 +45,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@meter-mcp/sdk": "^0.2.0",
+    "@meter-mcp/sdk": "^0.3.0",
     "commander": "^14.0.0"
   },
   "engines": {

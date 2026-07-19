@@ -1,6 +1,6 @@
 {
   "name": "@meter-mcp/adapters",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-neutral HTTP handlers for Meter buyer and operator sessions",
   "keywords": [
     "mcp",
@@ -42,7 +42,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@meter-mcp/sdk": "^0.2.0"
+    "@meter-mcp/sdk": "^0.3.0"
   },
   "engines": {
     "node": ">=20"
