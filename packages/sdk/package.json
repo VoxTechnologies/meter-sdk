@@ -1,6 +1,6 @@
 {
   "name": "@meter-mcp/sdk",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Server-side SDK for Meter prepaid credits and MCP usage billing",
   "keywords": [
     "mcp",

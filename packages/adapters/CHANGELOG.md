@@ -1,5 +1,11 @@
 # @meter-mcp/adapters
 
+## 0.4.1
+
+### Patch Changes
+
+- @meter-mcp/sdk@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@meter-mcp/mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Drop-in metered tool wrappers for Model Context Protocol servers",
   "keywords": [
     "mcp",
@@ -41,7 +41,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@meter-mcp/sdk": "^0.4.0"
+    "@meter-mcp/sdk": "^0.4.1"
   },
   "engines": {
     "node": ">=20"
