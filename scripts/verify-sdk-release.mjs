@@ -16,6 +16,6 @@ for (const manifest of manifests) {
   assert.equal(manifest.private, undefined, `${manifest.name} must be publishable`);
   assert.equal(manifest.publishConfig?.access, "public", `${manifest.name} must publish publicly`);
   assert.equal(manifest.publishConfig?.registry, "https://registry.npmjs.org", `${manifest.name} must target npmjs`);
-  assert.equal(manifest.repository?.url, "git+https://github.com/masterleopold/meter-sdk.git", `${manifest.name} repository must match trusted publishing source`);
+  assert.equal(manifest.repository?.url, "git+https://github.com/VoxTechnologies/meter-sdk.git", `${manifest.name} repository must match trusted publishing source`);
 }
 console.log(JSON.stringify({ ok: true, tag, version, packages: manifests.map((manifest) => manifest.name) }, null, 2));

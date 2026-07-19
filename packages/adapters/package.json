@@ -49,12 +49,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/masterleopold/meter-sdk.git",
+    "url": "git+https://github.com/VoxTechnologies/meter-sdk.git",
     "directory": "packages/adapters"
   },
-  "homepage": "https://github.com/masterleopold/meter-sdk/tree/main/packages/adapters#readme",
+  "homepage": "https://github.com/VoxTechnologies/meter-sdk/tree/main/packages/adapters#readme",
   "bugs": {
-    "url": "https://github.com/masterleopold/meter-sdk/issues"
+    "url": "https://github.com/VoxTechnologies/meter-sdk/issues"
   },
   "publishConfig": {
     "access": "public",
