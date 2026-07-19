@@ -27,6 +27,7 @@ import {
 import { runEventsTail, runUsage } from "./commands/usage.js";
 import { runCall } from "./commands/call.js";
 import { runInit } from "./commands/init.js";
+import { runOAuthProxy } from "./commands/oauth-proxy.js";
 import {
   runListen,
   runWebhooksCreate,
@@ -358,6 +359,28 @@ program
       onboardingKey: opts.onboardingKey,
       useProfile: opts.useProfile,
       target: opts.target,
+      install: opts.install,
+      io: nodeIo(),
+    });
+  });
+
+program
+  .command("oauth-proxy [name]")
+  .description("Scaffold a Cloudflare Workers OAuth proxy fronting an existing Meter-backed MCP endpoint")
+  .option("--dir <path>", "target directory (defaults to the project name)")
+  .option("--backend-url <url>", "service backend base URL that exposes /api/mcp/... and /api/meter/customers")
+  .option("--mcp-path <path>", "MCP endpoint path to proxy", "/api/mcp")
+  .option("--buyer-header <name>", "buyer-token header the backend expects", "x-meter-buyer-token")
+  .option("--service-name <name>", "human-readable service name shown on the consent page")
+  .option("--no-install", "skip running npm install in the new project")
+  .action(async (name, opts) => {
+    await runOAuthProxy({
+      name,
+      dir: opts.dir,
+      backendUrl: opts.backendUrl,
+      mcpPath: opts.mcpPath,
+      buyerHeader: opts.buyerHeader,
+      serviceName: opts.serviceName,
       install: opts.install,
       io: nodeIo(),
     });

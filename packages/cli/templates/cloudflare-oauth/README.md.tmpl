@@ -1,0 +1,63 @@
+# __PROJECT_NAME__
+
+A Cloudflare Worker that fronts an existing **Meter-backed MCP endpoint** with
+**OAuth 2.1**, so MCP clients whose remote-connector UX assumes OAuth (claude.ai
+custom connectors and the like) can connect with a "Connect" button instead of
+custom `x-meter-customer-id` / buyer-token headers.
+
+```text
+MCP client ──OAuth──▶ this Worker ──buyer headers──▶ __BACKEND_BASE_URL____MCP_PATH__ ──Meter──▶ credits
+                      /mcp (pass-through)
+```
+
+## What it is (and is NOT)
+
+- **A thin OAuth + pass-through proxy.** It forwards the JSON-RPC request
+  verbatim to your MCP endpoint and injects the buyer identity from the OAuth
+  grant. It re-implements no tools and owns no billing, so it can never drift
+  from your backend.
+- **No compute, no state.** Whatever your MCP endpoint does stays there; this
+  Worker only adds OAuth and header injection.
+
+## Backend contract (required)
+
+This Worker expects your service backend (`__BACKEND_BASE_URL__`) to expose:
+
+- `POST /api/meter/customers` → `{ buyerToken }` — provision an anonymous buyer.
+- `POST /api/meter/customers/:id/token` → `{ buyerToken, expiresIn }` — re-mint a
+  short-lived buyer token, authenticated by the `__BUYER_HEADER__` header.
+- Your MCP endpoint at `__MCP_PATH__`, authenticated by `x-meter-customer-id` +
+  `__BUYER_HEADER__`, ideally **stateless** (no in-memory MCP sessions).
+
+The `@meter-mcp/cli` scaffolds (the buyer-token helper and these routes) are the
+reference implementation; the Liminal and Parallax services use exactly this
+shape.
+
+## How identity works
+
+Meter MCP buyers are account-less prepaid credit holders, so the OAuth consent
+page (`/authorize`) *is* the identity flow: mint a fresh buyer (credentials are
+shown once on an interstitial so the balance is recoverable) or paste an
+existing `customerLocalId` + buyer token.
+
+## Revocable spend
+
+The grant stores a **1-hour** buyer token and re-mints it on every OAuth token
+exchange; access tokens live 30 min, so a refresh always re-mints while the
+current token is valid. Revoking the OAuth grant stops the re-mint, so **spend
+halts within one hour**. A transient re-mint failure keeps the existing token so
+a backend blip does not disconnect a live client.
+
+## Run / deploy
+
+```bash
+npm install
+npx wrangler kv namespace create OAUTH_KV     # paste the id into wrangler.jsonc
+npm run test
+npm run dev                                    # wrangler dev on :8787
+npm run deploy
+```
+
+Config lives in `wrangler.jsonc` `vars` (`BACKEND_BASE_URL`, `MCP_PATH`,
+`BUYER_HEADER`, `SERVICE_NAME`). No secrets: the Worker holds no keys — buyer
+tokens are minted by your backend at consent time.

@@ -40,6 +40,29 @@ npm run dev                                  # wrangler dev on :8787
 npx wrangler secret put METER_SERVICE_API_KEY && npm run deploy
 ```
 
+## OAuth proxy (front an existing service)
+
+`meter init` builds a new metered server. To put **OAuth 2.1** in front of an
+MCP endpoint you already run — so clients whose remote-connector UX assumes
+OAuth (claude.ai custom connectors) can connect with a Connect button instead
+of custom buyer headers — scaffold a Cloudflare Workers proxy:
+
+```bash
+meter oauth-proxy my-svc-oauth \
+  --backend-url https://my-svc.example.com \
+  --mcp-path /api/mcp \
+  --buyer-header x-meter-buyer-token \
+  --service-name "My Service"
+```
+
+It creates no service and runs no onboarding — it pass-through-proxies the
+JSON-RPC to your endpoint and injects the buyer identity from the OAuth grant
+(re-implementing no tools). The grant stores a short-lived buyer token re-minted
+on every token exchange, so revoking it halts spend within the hour. Your
+backend must expose `POST /api/meter/customers` and
+`POST /api/meter/customers/:id/token` (the generated project's README documents
+the contract).
+
 ## Configuration
 
 Credentials are stored per-profile in a config file at:
