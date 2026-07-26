@@ -29,7 +29,11 @@ Scope any script to one package with `-w`, e.g. `npm test -w @meter-mcp/sdk`.
 
 There is no ESLint/Prettier config; `npm run lint:packages` lints *package metadata* (publint + are-the-types-wrong), not source style.
 
+`npm run typecheck` is wider than the four packages: it also compiles `examples/meter-sdk` and the CLI scaffolding templates (`packages/cli/templates/tsconfig.json`). Editing an example or a template can break the gate.
+
 `scripts/verify-sdk-packages.mjs` is the strictest part of `verify`: it packs real tarballs, installs them into a clean consumer, and imports them from ESM, CommonJS, TS-ESM, and TS-CJS. Export-map or `.d.cts` regressions surface here, not in `npm test`.
+
+CI (`.github/workflows/ci.yml`) runs `npm run verify` on Node 20, 22, and 24, plus a full-history gitleaks scan.
 
 ## Architecture
 
@@ -38,7 +42,9 @@ Four npm workspaces under `packages/`, published together at a **single shared v
 - `@meter-mcp/sdk` — zero-dependency HTTP client (`MeterPublicApiClient`), AI-cost math, webhook signature verification. Everything else depends on it.
 - `@meter-mcp/mcp` — `paidTool` / `registerPaidTool`, which wrap an MCP tool handler in billing and translate a `402`-style error body into an MCP error result.
 - `@meter-mcp/adapters` — provider usage extractors (`aiUsageFromOpenAI` / `aiUsageFromAnthropic`) and Web-`Request`/`Response` handlers for buyer-portal and operator-console sessions, plus an Express bridge.
-- `@meter-mcp/cli` — the `meter` bin for provider developers: `login` / `init` (scaffolds an embedded-metering MCP server from `packages/cli/templates`, which ship in the tarball) / resource CRUD / `usage` + `events tail` / `webhooks` + `listen` (poll-mode webhook forwarding with client-side HMAC signing) / `call`. Commands are pure `run*(ctx, …)` functions in `src/commands/`; `src/cli.ts` only wires commander. Three wiring bugs unit tests cannot catch live in commander/bundle land — bin symlink vs `import.meta.url` realpath, global-vs-subcommand option shadowing, bundled-`dist` resource paths — which is why `test/init.test.ts` spawns the **built** `dist/cli.js` end-to-end; keep that test alive.
+- `@meter-mcp/cli` — the `meter` bin for provider developers: `login` / `init` / `oauth-proxy` / resource CRUD / `usage` + `events tail` / `webhooks` + `listen` (poll-mode webhook forwarding with client-side HMAC signing) / `call`. Commands are pure `run*(ctx, …)` functions in `src/commands/`; `src/cli.ts` only wires commander. Three wiring bugs unit tests cannot catch live in commander/bundle land — bin symlink vs `import.meta.url` realpath, global-vs-subcommand option shadowing, bundled-`dist` resource paths — which is why `test/init.test.ts` spawns the **built** `dist/cli.js` end-to-end; keep that test alive.
+
+`packages/cli/templates/` holds three scaffolding trees (`init` Node, `init --target cloudflare`, `oauth-proxy`). Nothing under `templates/cloudflare-oauth/` is compiled or run by `npm run verify` — see [docs/CLI_TEMPLATES.md](./docs/CLI_TEMPLATES.md) before editing any of them.
 
 ### The billing lifecycle
 
@@ -59,7 +65,7 @@ The core of the SDK is the three-phase call in `packages/sdk/src/client.ts`:
 
 ## Conventions
 
-- ESM source (`.ts`, NodeNext), `"type": "module"`, relative imports carry the `.js` extension.
+- ESM source (`.ts`, NodeNext), `"type": "module"`, relative imports carry the `.js` extension. The one exception is `templates/cloudflare-oauth/`, which is bundler-resolved and extensionless on purpose.
 - Node >= 20; the SDK relies on global `fetch`, `crypto.randomUUID`, and `crypto.subtle` rather than any runtime dependency. Keep `@meter-mcp/sdk` dependency-free.
 - New public API needs: an entry in `docs/SDK_API.md`, a test, and a changeset.
-- Releases are tag-driven (`sdk-v<version>`) and publish via GitHub OIDC trusted publishing — see `docs/SDK_RELEASE.md`. Never overwrite a published version.
+- Releases are tag-driven (`sdk-v<version>`) and publish via GitHub OIDC trusted publishing — see `docs/SDK_RELEASE.md`. Never overwrite a published version. `scripts/verify-sdk-release.mjs` runs in `sdk-publish.yml` (not in `verify`) and hard-fails unless all four versions match, the tag is exactly `sdk-v<version>`, and every manifest carries the `repository.url` and `publishConfig` that trusted publishing is bound to — so renaming the repo or touching `publishConfig` breaks publishing, not CI.
