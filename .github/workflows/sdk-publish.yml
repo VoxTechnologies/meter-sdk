@@ -16,6 +16,10 @@ concurrency:
 jobs:
   preflight:
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    # One environment comparison, measured at 3 to 5 seconds. Without this the
+    # job inherits the 360-minute default, and a runaway on Blacksmith is still
+    # wasteful and slow to notice even though it bills no GitHub minutes.
+    timeout-minutes: 5
     steps:
       - name: Require public source for npm provenance
         env:
@@ -31,6 +35,15 @@ jobs:
     # npm provenance rejects self-hosted/third-party runners (Blacksmith), so the
     # publishing job must run on a GitHub-hosted runner.
     runs-on: ubuntu-latest
+    # THE ONLY JOB IN THIS ORGANIZATION THAT SPENDS GITHUB ACTIONS MINUTES, so
+    # it is also the only one where the 360-minute default is a real bill: a
+    # single hung run would take 18% of the 2,000-minute monthly allowance, and
+    # `concurrency` here sets cancel-in-progress: false, so a later tag does not
+    # stop it. Every npm step below is a network call that can hang. Measured at
+    # 30 seconds to 1m22s across the seven runs to date, so 15 minutes is ten
+    # times the worst observed and still fails loudly instead of quietly
+    # spending the month.
+    timeout-minutes: 15
     environment: npm
     steps:
       - uses: actions/checkout@v7
