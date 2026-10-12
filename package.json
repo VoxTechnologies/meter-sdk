@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
-  "engines": { "node": ">=20" },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "npm@11.3.0",
   "scripts": {
     "build": "npm run build -w @meter-mcp/sdk && npm run build -w @meter-mcp/mcp && npm run build -w @meter-mcp/adapters && npm run build -w @meter-mcp/cli",
@@ -21,7 +25,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@changesets/cli": "^2.29.7",
+    "@changesets/cli": "^3.0.3",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/node": "^24.0.0",
     "publint": "^0.3.21",
@@ -31,7 +35,9 @@
     "zod": "^3.25.76"
   },
   "overrides": {
-    "tsup": { "esbuild": "^0.28.1" },
+    "tsup": {
+      "esbuild": "^0.28.1"
+    },
     "@hono/node-server": "^2.0.5",
     "fast-uri": "^3.1.4"
   }
