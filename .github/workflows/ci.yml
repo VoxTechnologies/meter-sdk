@@ -7,10 +7,15 @@ on:
   pull_request:
     paths-ignore: ['**/*.md', 'docs/**']
     branches: [main]
+  schedule:
+    - cron: 47 18 * * *
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+  actions: read
+  pull-requests: read
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -21,16 +26,74 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
+      - name: Plan lightweight and daily checks
+        id: ci-plan
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          CI_WORKFLOW_FILE: ci.yml
+        with:
+          script: |-
+            const repo = context.repo;
+            const workflow = context.workflow;
+            const workflowId = process.env.CI_WORKFLOW_FILE;
+            const heavy = ['schedule', 'workflow_dispatch'].includes(context.eventName);
+            let run = true;
+            if (context.eventName === 'push') {
+              const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+                ...repo, commit_sha: context.sha, per_page: 100,
+              });
+              const merged = prs.find(pr => pr.merged_at && pr.merge_commit_sha === context.sha);
+              if (merged) {
+                const { data } = await github.rest.actions.listWorkflowRuns({
+                  ...repo, workflow_id: workflowId, event: 'pull_request',
+                  head_sha: merged.head.sha, per_page: 1,
+                });
+                run = data.workflow_runs[0]?.conclusion !== 'success';
+              }
+            }
+            if (context.eventName === 'schedule') {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                ...repo, workflow_id: workflowId, event: 'schedule', status: 'completed', per_page: 1,
+              });
+              const previous = data.workflow_runs[0];
+              if (previous?.conclusion === 'success' && previous.head_sha === context.sha) {
+                run = false;
+              } else if (previous?.conclusion === 'success') {
+                const { data: diff } = await github.rest.repos.compareCommitsWithBasehead({
+                  ...repo, basehead: `${previous.head_sha}...${context.sha}`,
+                });
+                const files = diff.files ?? [];
+                const documentsOnly = Array.isArray(diff.files) && files.length < 300 && files.every(file => {
+                  const ignored = name => !name.endsWith('.design.md') &&
+                    !name.startsWith('qms/') && !name.startsWith('docs/generated/') &&
+                    (name.endsWith('.md') || name.startsWith('docs/'));
+                  return ignored(file.filename) && (!file.previous_filename || ignored(file.previous_filename));
+                });
+                run = !documentsOnly;
+              }
+            }
+            core.setOutput('run', String(run));
+            core.setOutput('heavy', String(heavy));
+            await core.summary.addHeading(workflow).addRaw(
+              run ? (heavy ? 'Daily/full checks for this source.' : 'Lightweight PR/direct-push checks; full checks run daily.') :
+                'Reusing successful checks: merged PR or no executable changes since the last daily pass.',
+            ).write();
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+        if: ${{ steps.ci-plan.outputs.run == 'true' }}
       - name: Install gitleaks
         run: |
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar -xz gitleaks
           sudo mv gitleaks /usr/local/bin/
+        if: ${{ steps.ci-plan.outputs.run == 'true' }}
       - name: Secret history scan
         run: gitleaks git . --redact -v
 
+        if: ${{ steps.ci-plan.outputs.run == 'true' }}
+    outputs:
+      run: ${{ steps.ci-plan.outputs.run }}
+      heavy: ${{ steps.ci-plan.outputs.heavy }}
   sdk:
     name: Node ${{ matrix.node }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -38,7 +101,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '[20,22,24]' || '[24]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -48,3 +111,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run verify
+    needs:
+      - secrets
+    if: ${{ needs.secrets.outputs.run == 'true' }}
